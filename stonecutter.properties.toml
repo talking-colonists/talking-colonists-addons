@@ -59,6 +59,13 @@ mod.group = "me.sshcrack.tc_postal"
 mod.version = "0.1.0"
 mod.description = "Write letters to your citizens and get in-character replies in your mailbox"
 
+[tavern]
+mod.id = "tc_tavern"
+mod.name = "Talking Colonists: Tavern Recruiter"
+mod.group = "me.sshcrack.tc_tavern"
+mod.version = "0.1.0"
+mod.description = "Talk to tavern visitors and talk them into joining your colony for less"
+
 [playtest]
 mod.id = "tc_playtest"
 mod.name = "Talking Colonists Addons: Playtest"

@@ -29,7 +29,8 @@ final class PlaytestCommand {
                 })
                 .then(Commands.literal("home").executes(PlaytestCommand::home))
                 .then(Commands.literal("news").executes(PlaytestCommand::news))
-                .then(Commands.literal("letter").executes(PlaytestCommand::letter)));
+                .then(Commands.literal("letter").executes(PlaytestCommand::letter))
+                .then(Commands.literal("visitor").executes(PlaytestCommand::visitor)));
     }
 
     private static int home(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
@@ -74,6 +75,24 @@ final class PlaytestCommand {
         context.getSource().sendSuccess(() -> Component.literal("[Playtest] A letter to " + name
                 + ". Right-click them (or the courier) with it."), false);
         return 1;
+    }
+
+    /** Teleports next to a loaded tavern visitor and says what they ask to join. */
+    private static int visitor(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        IColony colony = colony(player);
+        if (colony == null) return 0;
+        for (var data : colony.getVisitorManager().getCivilianDataMap().values()) {
+            var entity = data.getEntity().orElse(null);
+            if (!(data instanceof com.minecolonies.api.colony.IVisitorData visitor) || entity == null) continue;
+            player.teleportTo(entity.getX() + 1.5, entity.getY(), entity.getZ());
+            var cost = visitor.getRecruitCost();
+            context.getSource().sendSuccess(() -> Component.literal("[Playtest] " + data.getName() + " asks "
+                    + cost.getCount() + " x " + cost.getHoverName().getString() + " to join. Talk them down!"), false);
+            return 1;
+        }
+        context.getSource().sendFailure(Component.literal("[Playtest] No visitor is at the tavern right now; one arrives every few minutes."));
+        return 0;
     }
 
     private static IColony colony(ServerPlayer player) {

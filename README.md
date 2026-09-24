@@ -9,6 +9,7 @@ they only share this repository and its build.
 | Colony Gazette | [`gazette/`](gazette) | The colony writes a daily newspaper about yesterday's events, in a citizen's own words. |
 | Campfire Nights | [`campfire/`](campfire) | At dusk, citizens gather around a campfire and tell each other stories. |
 | Postal Service | [`postal/`](postal) | Write letters to your citizens and get in-character replies in your mailbox. |
+| Tavern Recruiter | [`tavern/`](tavern) | Talk to tavern visitors and talk them into joining for less. |
 
 Every addon builds for **1.21.1 NeoForge** and **1.20.1 Forge** from one source tree, using
 [Stonecutter](https://stonecutter.kikugie.dev/), and needs Talking Colonists 2.1 or newer.
@@ -52,6 +53,14 @@ writes back in character, and the reply waits in your mailbox:
 The citizen remembers the exchange (a confirmed Talking Colonists memory), so they can bring it up
 when you talk. The recipient has to be loaded to write back; letters wait for them, and come back
 undelivered after three in-game days or if the citizen left the colony.
+
+## Tavern Recruiter
+
+MineColonies visitors at the tavern can now be talked to like citizens. Each one knows what joining
+costs and may haggle: make a good case (a job that suits them, kindness, a fair offer) and they lower
+their recruit cost through the `negotiate_recruit_cost` tool, which the server limits to small steps,
+never below half the original price and at most three changes a day. The new price shows up in
+MineColonies' recruit window, and the visitor remembers the deal after they join.
 
 ## Layout
 

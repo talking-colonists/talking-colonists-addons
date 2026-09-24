@@ -45,7 +45,10 @@ final class Checklist {
                     "Sign a book with a citizen's name as its title and right-click the courier (or the citizen) with it.", List.of(
                     new Button("Get a test letter", "/playtest letter", "A signed letter to a random citizen of the colony"),
                     new Button("Deliver now", "/mail rush", "Your letters arrive within seconds"),
-                    new Button("Collect mail", "/mail", "Take the replies from your mailbox"))));
+                    new Button("Collect mail", "/mail", "Take the replies from your mailbox"))),
+            new Section("tc_tavern", "Tavern Recruiter",
+                    "Talk to a tavern visitor and ask them to join for less; a good case lowers their price.", List.of(
+                    new Button("Go to a visitor", "/playtest visitor", "Teleport next to a tavern visitor"))));
 
     private Checklist() {
     }
