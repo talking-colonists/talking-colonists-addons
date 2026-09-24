@@ -2,6 +2,7 @@ package me.sshcrack.tc_campfire;
 
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
+import com.minecolonies.core.entity.other.SittingEntity;
 import me.sshcrack.mc_talking.api.ApiFeature;
 import me.sshcrack.mc_talking.api.TalkingColonistsApi;
 import me.sshcrack.mc_talking.api.colony.AddonColonyEvent;
@@ -15,6 +16,7 @@ import me.sshcrack.mc_talking.api.conversation.ControlledConversationSession;
 import me.sshcrack.mc_talking.api.conversation.ConversationTranscriptEntry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -42,6 +44,8 @@ public final class Gathering {
     private static final double SEATED_DISTANCE_SQ = 1.5 * 1.5;
     private static final double DRIFT_DISTANCE_SQ = 3.5 * 3.5;
     private static final double WALK_SPEED = 0.6;
+    /** Guests stay seated for the whole night; {@link #finish} stands them up earlier. */
+    private static final int SIT_TICKS = GATHER_TIMEOUT_TICKS + TELLING_TIMEOUT_TICKS;
 
     private final MinecraftServer server;
     final IColony colony;
@@ -127,8 +131,12 @@ public final class Gathering {
         if (ticks >= GATHER_TIMEOUT_TICKS + TELLING_TIMEOUT_TICKS) finish("The night is over");
     }
 
-    /** Walks the teller to the seat (re-pathing when {@code repath}) or keeps it there facing the fire. */
+    /** Walks the teller to the seat (re-pathing when {@code repath}) or keeps it there facing the fire, sitting if it can. */
     private boolean holdSeat(AbstractEntityCitizen teller, Vec3 seat, boolean repath) {
+        if (teller.getVehicle() instanceof SittingEntity) {
+            faceFire(teller);
+            return true;
+        }
         double distanceSq = teller.position().distanceToSqr(seat);
         boolean seated = distanceSq <= SEATED_DISTANCE_SQ;
         double limit = phase == Phase.GATHERING ? SEATED_DISTANCE_SQ : DRIFT_DISTANCE_SQ;
@@ -137,8 +145,29 @@ public final class Gathering {
         } else {
             if (!teller.getNavigation().isDone()) teller.getNavigation().stop();
             teller.getLookControl().setLookAt(campfire.getX() + 0.5, campfire.getY() + 0.5, campfire.getZ() + 0.5);
+            // At the seat, sit on it; a teller that stopped short during the story sits where it stands.
+            sit(teller, seated ? seat : teller.position());
         }
         return seated;
+    }
+
+    /** Sits the teller down on open ground at {@code where}; where there is no room it keeps standing. */
+    private void sit(AbstractEntityCitizen teller, Vec3 where) {
+        BlockPos spot = BlockPos.containing(where);
+        BlockPos ground = spot.below();
+        if (!level.getBlockState(spot).getCollisionShape(level, spot).isEmpty()) return;
+        if (!level.getBlockState(ground).isFaceSturdy(level, ground, Direction.UP)) return;
+        if (SittingEntity.sitDown(spot, teller, SIT_TICKS) && teller.getVehicle() != null) faceFire(teller);
+    }
+
+    /** Turns the whole body, not just the head, towards the fire. */
+    private void faceFire(AbstractEntityCitizen teller) {
+        double dx = campfire.getX() + 0.5 - teller.getX();
+        double dz = campfire.getZ() + 0.5 - teller.getZ();
+        float yaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90);
+        teller.setYRot(yaw);
+        teller.setYBodyRot(yaw);
+        teller.setYHeadRot(yaw);
     }
 
     private void beginTelling() {
@@ -210,6 +239,7 @@ public final class Gathering {
         if (discussion != null) discussion.stop();
         if (session != null) session.end();
         for (AbstractEntityCitizen teller : tellers) {
+            if (teller.getVehicle() instanceof SittingEntity) teller.stopRiding();
             if (teller.isAlive()) teller.getNavigation().stop();
         }
         for (ConversationTranscriptEntry entry : transcript) {

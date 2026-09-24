@@ -33,7 +33,8 @@ import java.util.UUID;
  * ({@code -Dtc_campfire.selftest=true}); excluded from the release jar. It creates a colony with three
  * citizens and a lit campfire, runs a real campfire night through Talking Colonists (Gemini Live), and
  * checks that at least one story was told and recorded as colony news. It runs at night and checks that the
- * tellers' MineColonies routine never turns to sleep while the story is told (they would walk off to bed). Logs
+ * tellers' MineColonies routine never turns to sleep while the story is told (they would walk off to bed), that
+ * they sit around the fire, and that they stand up when the night ends. Logs
  * {@code TC_CAMPFIRE_SELFTEST_SUCCESS} or {@code TC_CAMPFIRE_SELFTEST_FAIL} and stops the server.
  */
 public final class DevSelfTest {
@@ -47,6 +48,8 @@ public final class DevSelfTest {
     private static Gathering gathering;
     private static int samples;
     private static String wentToBed = "";
+    private static int seated;
+    private static int checks;
 
     private DevSelfTest() {
     }
@@ -94,6 +97,8 @@ public final class DevSelfTest {
             if (teller instanceof EntityCitizen citizen && citizen.getCitizenAI().getState() == CitizenAIState.SLEEP) {
                 wentToBed = teller.getName().getString();
             }
+            checks++;
+            if (teller.getVehicle() != null) seated++;
         }
         samples++;
     }
@@ -103,6 +108,15 @@ public final class DevSelfTest {
         CampfireNights.LOGGER.info("TC_CAMPFIRE_SELFTEST: checked the tellers' routine {} times during the story", samples);
         if (!wentToBed.isEmpty()) {
             fail(server, wentToBed + "'s routine turned to sleep during the story");
+            return;
+        }
+        CampfireNights.LOGGER.info("TC_CAMPFIRE_SELFTEST: tellers were seated in {} of {} checks", seated, checks);
+        if (seated * 10 < checks * 9) {
+            fail(server, "the tellers did not stay seated around the fire");
+            return;
+        }
+        if (gathering.tellers().stream().anyMatch(teller -> teller.getVehicle() != null)) {
+            fail(server, "the tellers did not stand up after the night");
             return;
         }
         CampfireNights.LOGGER.info("TC_CAMPFIRE_SELFTEST: {}", summary);
