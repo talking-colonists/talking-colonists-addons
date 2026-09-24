@@ -33,6 +33,12 @@ python3 scripts/ensure_key.py "$config" "${TC_ADDONS_KEY_FILE:-}" \
 if [[ ! -f "$run/options.txt" ]]; then
   printf 'onboardAccessibility:false\ntutorialStep:none\njoinedFirstServer:true\nskipMultiplayerWarning:true\npauseOnLostFocus:false\n' > "$run/options.txt"
 fi
+# No background music while it plays through your speakers; the citizens' voices stay audible.
+if grep -q '^soundCategory_music:' "$run/options.txt"; then
+  sed -i 's/^soundCategory_music:.*/soundCategory_music:0.0/' "$run/options.txt"
+else
+  echo 'soundCategory_music:0.0' >> "$run/options.txt"
+fi
 
 gradle=(./gradlew ":playtest:$version:runScenarioClient" "-PtcScenario=$scenario")
 # Headless by default, even on a desktop; TC_SCENARIO_VISIBLE=1 shows the window.
