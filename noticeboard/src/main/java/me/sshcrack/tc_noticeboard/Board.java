@@ -222,7 +222,9 @@ public final class Board {
             pages.add(Component.literal(reply));
         }
         WrittenBooks.appendPages(book, pages);
-        lectern.setChanged();
+        // The lectern caches the page count from when the book was placed; hand the book back so
+        // readers can turn to the new pages.
+        lectern.setBook(book);
         String summary = notice.replies.size() + (notice.replies.size() == 1 ? " citizen" : " citizens")
                 + " pinned a reply to \"" + notice.title + "\". Read them on the lectern.";
         ServerPlayer poster = server.getPlayerList().getPlayer(notice.posterId);

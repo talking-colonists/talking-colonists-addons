@@ -104,6 +104,10 @@ public final class DevSelfTest {
         LecternBlockEntity lectern = (LecternBlockEntity) level.getBlockEntity(lecternPos);
         BookText text = BookText.read(lectern.getBook());
         require(text != null && text.pages().size() > pagesBefore, "replies were pinned into the book");
+        // Turn the page the way a reader does: the lectern menu's "next page" button.
+        var menu = (net.minecraft.world.inventory.LecternMenu) lectern.createMenu(0, poster.getInventory(), poster);
+        menu.clickMenuButton(poster, 2);
+        require(lectern.getPage() == 1, "readers can turn to the pinned replies on the lectern");
         for (String page : text.pages().subList(pagesBefore, text.pages().size())) {
             NoticeBoard.LOGGER.info("TC_NOTICEBOARD_SELFTEST: pinned: {}", page.replace('\n', ' '));
         }
