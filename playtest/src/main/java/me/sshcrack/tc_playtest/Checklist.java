@@ -36,7 +36,11 @@ final class Checklist {
             new Section("tc_gazette", "Colony Gazette",
                     "Every morning the teacher writes about yesterday. Add news, publish, then read your copy.", List.of(
                     new Button("Publish now", "/gazette publish", "Write an issue right away (uses one Gemini request)"),
-                    new Button("Get a copy", "/gazette", "Hand me the latest issue"))));
+                    new Button("Get a copy", "/gazette", "Hand me the latest issue"))),
+            new Section("tc_campfire", "Campfire Nights",
+                    "At dusk, idle citizens tell stories at the campfire. Stand close and chat to join in.", List.of(
+                    new Button("Start now", "/campfire start", "Gather idle citizens at the nearest campfire (uses Gemini Live)"),
+                    new Button("Stop", "/campfire stop", "End the campfire night"))));
 
     private Checklist() {
     }

@@ -7,6 +7,7 @@ they only share this repository and its build.
 | Addon | Directory | What it does |
 |---|---|---|
 | Colony Gazette | [`gazette/`](gazette) | The colony writes a daily newspaper about yesterday's events, in a citizen's own words. |
+| Campfire Nights | [`campfire/`](campfire) | At dusk, citizens gather around a campfire and tell each other stories. |
 
 Every addon builds for **1.21.1 NeoForge** and **1.20.1 Forge** from one source tree, using
 [Stonecutter](https://stonecutter.kikugie.dev/), and needs Talking Colonists 2.1 or newer.
@@ -25,6 +26,17 @@ Colony members get a chat message when a new issue is out.
 
 Quiet days with no events get no issue. Issues use a background Gemini request and are skipped while
 the key's quota is used up or all background slots are busy; the gazette retries a few times per day.
+
+## Campfire Nights
+
+At dusk (in-game time 12000 to 13500), if a player is near a lit campfire inside a colony, three to
+five idle citizens walk over, sit around it and take turns telling stories: memories, colony news or
+tales from before they came. It is a real Gemini Live group conversation, so you hear them talk. Chat
+while you stand near the fire and they hear you and may answer. Each colony has at most one campfire
+night per day, and only when Talking Colonists has spare speech capacity. The night becomes colony
+news, so the Gazette may report it.
+
+- `/campfire start` (operators) starts one at the nearest campfire right away; `/campfire stop` ends it.
 
 ## Layout
 

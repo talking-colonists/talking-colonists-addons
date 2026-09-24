@@ -45,6 +45,13 @@ mod.group = "me.sshcrack.tc_gazette"
 mod.version = "0.1.0"
 mod.description = "The colony writes a daily newspaper about yesterday's events, in a citizen's own words"
 
+[campfire]
+mod.id = "tc_campfire"
+mod.name = "Talking Colonists: Campfire Nights"
+mod.group = "me.sshcrack.tc_campfire"
+mod.version = "0.1.0"
+mod.description = "At dusk, citizens gather around a campfire and tell each other stories from their memories"
+
 [playtest]
 mod.id = "tc_playtest"
 mod.name = "Talking Colonists Addons: Playtest"
