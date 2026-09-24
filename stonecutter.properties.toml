@@ -73,6 +73,13 @@ mod.group = "me.sshcrack.tc_noticeboard"
 mod.version = "0.1.0"
 mod.description = "Post notices on a lectern for your citizens to read, spread and answer, and ring the town bell to tell everyone"
 
+[townhall]
+mod.id = "tc_townhall"
+mod.name = "Talking Colonists: Town Hall"
+mod.group = "me.sshcrack.tc_townhall"
+mod.version = "0.1.0"
+mod.description = "Stand for mayor at your town hall: give a speech, and your citizens vote on what they heard and how they feel about you"
+
 [playtest]
 mod.id = "tc_playtest"
 mod.name = "Talking Colonists Addons: Playtest"

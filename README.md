@@ -11,6 +11,7 @@ they only share this repository and its build.
 | Postal Service | [`postal/`](postal) | Write letters to your citizens and get in-character replies in your mailbox. |
 | Tavern Recruiter | [`tavern/`](tavern) | Talk to tavern visitors and talk them into joining for less. |
 | Notice Board | [`noticeboard/`](noticeboard) | Post notices on a lectern for citizens to spread and answer; ring the town bell to tell everyone. |
+| Town Hall | [`townhall/`](townhall) | Stand for mayor with a speech; citizens vote on what they heard. A suggestion box for their notes. |
 
 Every addon builds for **1.21.1 NeoForge** and **1.20.1 Forge** from one source tree, using
 [Stonecutter](https://stonecutter.kikugie.dev/), and needs Talking Colonists 2.1 or newer.
@@ -77,6 +78,24 @@ Ring a bell inside your colony while holding a signed book and every citizen hea
 a town crier (the bell rings as usual).
 
 - Operators: `/noticeboard rush` makes waiting notices collect their replies now.
+
+## Town Hall
+
+Right-click your colony's Town Hall block while holding a signed book: you stand for mayor, with the
+book's title as your slogan and its text as your platform. With Simple Voice Chat you then have 30
+seconds to give a speech. Citizens at the town hall hear it and pass it on, so every citizen votes on
+what actually reached them, and on how they feel about you after your conversations.
+
+The campaign lasts one Minecraft day. If you're the only candidate, the unhappiest citizen stands
+against you, with a platform built from the colony's real problems, so you can lose. Then every grown
+citizen votes in character. The whole colony hears the result, a citizen brings you the results book
+with a few voters' reasons, and the mayor is part of what citizens know from then on. A new election
+can be called three days later.
+
+Place a barrel within 4 blocks of the Town Hall block and it becomes the suggestion box: every morning
+up to three unhappy citizens drop a one-page note with a real concern or wish (at most 6 wait in it).
+
+- Operators: `/townhall rush` ends running campaigns now; `/townhall notes` has citizens write notes now.
 
 ## Layout
 
