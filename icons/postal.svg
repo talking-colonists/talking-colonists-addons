@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 884 884" width="884" height="884">
+  <!-- Postal Service: a sealed letter. -->
+  <rect width="884" height="884" fill="#333"/>
+  <path d="M622 150 Q638 232 720 248 Q638 264 622 346 Q606 264 524 248 Q606 232 622 150 Z" fill="#ddd" stroke="#ddd" stroke-width="18" stroke-linejoin="round"/>
+  <g transform="translate(-20 20)">
+  <rect x="140" y="340" width="480" height="340" rx="36" fill="#ddd"/>
+  <!-- flap and fold lines cut out -->
+  <path d="M175 375 L380 525 L585 375" fill="none" stroke="#333" stroke-width="36" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M175 645 L320 520 M585 645 L440 520" fill="none" stroke="#333" stroke-width="28" stroke-linecap="round"/>
+  <!-- wax seal -->
+  <circle cx="380" cy="530" r="52" fill="#ddd" stroke="#333" stroke-width="22"/>
+  </g>
+</svg>

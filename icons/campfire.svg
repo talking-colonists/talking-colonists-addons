@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 884 884" width="884" height="884">
+  <!-- Campfire Nights: a campfire whose voice carries (the sound arc from the Talking Colonists icon). -->
+  <rect width="884" height="884" fill="#333"/>
+  <path d="M622 150 Q638 232 720 248 Q638 264 622 346 Q606 264 524 248 Q606 232 622 150 Z" fill="#ddd" stroke="#ddd" stroke-width="18" stroke-linejoin="round"/>
+  <g transform="translate(-10 0)">
+  <!-- flame with an inner cut -->
+  <path d="M360 250 C 380 340 480 380 480 500 C 480 580 425 630 360 630 C 295 630 240 580 240 505 C 240 440 280 410 300 360 C 315 400 330 420 350 430 C 345 370 345 310 360 250 Z" fill="#ddd"/>
+  <path d="M362 470 C 372 510 420 530 420 575 C 420 605 395 625 362 625 C 329 625 304 605 304 575 C 304 545 325 530 335 505 C 342 525 350 530 358 533 C 356 510 356 490 362 470 Z" fill="#333"/>
+  <!-- crossed logs -->
+  <rect x="150" y="640" width="420" height="62" rx="31" fill="#ddd" transform="rotate(12 360 671)"/>
+  <rect x="150" y="640" width="420" height="62" rx="31" fill="#ddd" transform="rotate(-12 360 671)"/>
+  <!-- sound arcs -->
+  <path d="M560 420 A 150 150 0 0 1 560 600" fill="none" stroke="#ddd" stroke-width="52"/>
+  <path d="M650 380 A 230 230 0 0 1 650 640" fill="none" stroke="#ddd" stroke-width="52"/>
+  </g>
+</svg>

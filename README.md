@@ -43,6 +43,7 @@ news, so the Gazette may report it.
 ```
 build.neoforge.gradle.kts, build.forge.gradle.kts   shared loader build scripts
 playtest/                                            dev-only mod for scripts/playtest.sh (never released)
+icons/<addon>.svg                                    addon icons; scripts/render-icons.sh renders the PNGs
 build-logic/                                         shared Gradle plugin (mods.toml, publishing, ...)
 stonecutter.properties.toml                          shared properties, plus one table per addon
 <addon>/src/                                         the addon's code and resources

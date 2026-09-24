@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 884 884" width="884" height="884">
+  <!-- Notice Board: a board with pinned notes. -->
+  <rect width="884" height="884" fill="#333"/>
+  <path d="M622 150 Q638 232 720 248 Q638 264 622 346 Q606 264 524 248 Q606 232 622 150 Z" fill="#ddd" stroke="#ddd" stroke-width="18" stroke-linejoin="round"/>
+  <g transform="translate(-10 40) scale(0.9) translate(10 20)">
+  <!-- legs -->
+  <rect x="200" y="560" width="50" height="190" rx="16" fill="#ddd"/>
+  <rect x="510" y="560" width="50" height="190" rx="16" fill="#ddd"/>
+  <!-- board -->
+  <rect x="130" y="300" width="500" height="320" rx="34" fill="#ddd"/>
+  <!-- notes cut out, with pins -->
+  <rect x="180" y="350" width="170" height="210" rx="14" fill="#333"/>
+  <rect x="390" y="350" width="190" height="130" rx="14" fill="#333"/>
+  <circle cx="265" cy="385" r="18" fill="#ddd"/>
+  <circle cx="485" cy="385" r="18" fill="#ddd"/>
+  <rect x="210" y="430" width="110" height="20" rx="8" fill="#ddd"/>
+  <rect x="210" y="470" width="110" height="20" rx="8" fill="#ddd"/>
+  <rect x="210" y="510" width="70" height="20" rx="8" fill="#ddd"/>
+  <rect x="420" y="425" width="130" height="20" rx="8" fill="#ddd"/>
+  </g>
+</svg>

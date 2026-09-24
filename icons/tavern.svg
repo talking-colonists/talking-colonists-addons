@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 884 884" width="884" height="884">
+  <!-- Tavern Recruiter: a frothy mug. -->
+  <rect width="884" height="884" fill="#333"/>
+  <path d="M622 150 Q638 232 720 248 Q638 264 622 346 Q606 264 524 248 Q606 232 622 150 Z" fill="#ddd" stroke="#ddd" stroke-width="18" stroke-linejoin="round"/>
+  <g transform="translate(0 20) scale(0.92) translate(0 30)">
+  <!-- handle -->
+  <path d="M500 420 h50 a90 90 0 0 1 90 90 v40 a90 90 0 0 1 -90 90 h-50" fill="none" stroke="#ddd" stroke-width="56"/>
+  <!-- body -->
+  <rect x="180" y="380" width="340" height="360" rx="40" fill="#ddd"/>
+  <!-- foam -->
+  <path d="M170 400 a70 70 0 0 1 60 -110 a80 80 0 0 1 140 -30 a75 75 0 0 1 130 40 a60 60 0 0 1 30 100 z" fill="#ddd"/>
+  <!-- staves cut out -->
+  <rect x="255" y="450" width="34" height="220" rx="17" fill="#333"/>
+  <rect x="333" y="450" width="34" height="220" rx="17" fill="#333"/>
+  <rect x="411" y="450" width="34" height="220" rx="17" fill="#333"/>
+  </g>
+</svg>

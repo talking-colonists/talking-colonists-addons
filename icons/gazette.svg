@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 884 884" width="884" height="884">
+  <!-- Colony Gazette: a newspaper. Same palette and sparkle as the Talking Colonists icon. -->
+  <rect width="884" height="884" fill="#333"/>
+  <path d="M622 150 Q638 232 720 248 Q638 264 622 346 Q606 264 524 248 Q606 232 622 150 Z" fill="#ddd" stroke="#ddd" stroke-width="18" stroke-linejoin="round"/>
+  <g transform="translate(-20 40) scale(0.9) translate(40 0)">
+  <!-- back page -->
+  <rect x="140" y="360" width="140" height="370" rx="30" fill="#ddd"/>
+  <!-- front page -->
+  <rect x="190" y="300" width="410" height="430" rx="34" fill="#ddd" stroke="#333" stroke-width="20"/>
+  <!-- headline, picture and text lines cut out -->
+  <rect x="250" y="350" width="300" height="46" rx="10" fill="#333"/>
+  <rect x="250" y="430" width="130" height="120" rx="10" fill="#333"/>
+  <rect x="410" y="430" width="140" height="26" rx="8" fill="#333"/>
+  <rect x="410" y="477" width="140" height="26" rx="8" fill="#333"/>
+  <rect x="410" y="524" width="140" height="26" rx="8" fill="#333"/>
+  <rect x="250" y="590" width="300" height="26" rx="8" fill="#333"/>
+  <rect x="250" y="637" width="220" height="26" rx="8" fill="#333"/>
+  </g>
+</svg>
