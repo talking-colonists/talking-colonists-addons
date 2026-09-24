@@ -6,6 +6,9 @@ import com.minecolonies.api.colony.IColonyManager;
 import com.mojang.authlib.GameProfile;
 import me.sshcrack.tc_noticeboard.Board;
 import me.sshcrack.tc_noticeboard.NoticeBoard;
+import me.sshcrack.tc_noticeboard.block.NoticeBoardBlock;
+import me.sshcrack.tc_noticeboard.block.NoticeBoardBlockEntity;
+import me.sshcrack.tc_noticeboard.block.NoticeBoardBlocks;
 import me.sshcrack.tc_noticeboard.shared.book.BookText;
 import me.sshcrack.tc_noticeboard.shared.book.WrittenBooks;
 import net.minecraft.core.BlockPos;
@@ -34,7 +37,8 @@ import net.minecraft.world.inventory.LecternMenu;
  * Dev-only end-to-end check, run by the {@code selfTestServer} Gradle run
  * ({@code -Dtc_noticeboard.selftest=true}); excluded from the release jar. It creates a colony with three
  * citizens around a lectern, posts a notice, rushes the replies (real Talking Colonists text generation),
- * and checks that they were pinned into the book; then it rings the town bell with a book. Logs
+ * and checks that they were pinned into the book; then it rings the town bell with a book. Then it posts
+ * a notice on a Notice Board block and checks the replies are pinned on it, and that it can be taken down. Logs
  * {@code TC_NOTICEBOARD_SELFTEST_SUCCESS} or {@code TC_NOTICEBOARD_SELFTEST_FAIL} and stops the server.
  */
 public final class DevSelfTest {
@@ -49,6 +53,7 @@ public final class DevSelfTest {
     private static BlockPos lecternPos;
     private static IColony colony;
     private static ServerPlayer poster;
+    private static BlockPos boardPos;
 
     private DevSelfTest() {
     }
@@ -102,6 +107,10 @@ public final class DevSelfTest {
     private static void check(MinecraftServer server) {
         Board board = NoticeBoard.board();
         if (board == null || !board.notices().isEmpty()) return;
+        if (boardPos != null) {
+            checkBoard(server, board);
+            return;
+        }
         LecternBlockEntity lectern = (LecternBlockEntity) level.getBlockEntity(lecternPos);
         BookText text = BookText.read(lectern.getBook());
         require(text != null && text.pages().size() > pagesBefore, "replies were pinned into the book");
@@ -119,6 +128,29 @@ public final class DevSelfTest {
         boolean rang = board.ringBell(poster, level, bell, crier);
         NoticeBoard.LOGGER.info("TC_NOTICEBOARD_SELFTEST: town bell announced: {}", rang);
         require(rang, "the town bell announces the book");
+
+        boardPos = lecternPos.offset(-2, 0, 0);
+        level.setBlock(boardPos, NoticeBoardBlocks.NOTICE_BOARD.get().defaultBlockState(), 3);
+        require(board.postOnBoard(poster, level, boardPos, "Well needed",
+                "We should dig a well by the fields so the farmers stop walking to the river. Who can help?"), "the notice was posted on the board");
+        NoticeBoardBlockEntity entity = (NoticeBoardBlockEntity) level.getBlockEntity(boardPos);
+        require(entity.hasNotice() && level.getBlockState(boardPos).getValue(NoticeBoardBlock.SHEETS) == 1,
+                "the board shows the notice");
+        board.rush();
+        NoticeBoard.LOGGER.info("TC_NOTICEBOARD_SELFTEST: notice pinned on the board");
+    }
+
+    private static void checkBoard(MinecraftServer server, Board board) {
+        NoticeBoardBlockEntity entity = (NoticeBoardBlockEntity) level.getBlockEntity(boardPos);
+        require(!entity.replies().isEmpty(), "replies were pinned on the board");
+        int sheets = level.getBlockState(boardPos).getValue(NoticeBoardBlock.SHEETS);
+        require(sheets == (entity.replies().size() <= 1 ? 1 : 2), "the board shows its replies");
+        for (NoticeBoardBlockEntity.Reply reply : entity.replies()) {
+            NoticeBoard.LOGGER.info("TC_NOTICEBOARD_SELFTEST: on the board: {} ({}): {}", reply.writer(), reply.role(), reply.text());
+        }
+        NoticeBoard.LOGGER.info("TC_NOTICEBOARD_SELFTEST: reach: {}", entity.reach());
+        board.takeDown(poster, level, boardPos);
+        require(!entity.hasNotice() && level.getBlockState(boardPos).getValue(NoticeBoardBlock.SHEETS) == 0, "the notice can be taken down");
         done = true;
         NoticeBoard.LOGGER.info("TC_NOTICEBOARD_SELFTEST_SUCCESS");
         server.halt(false);

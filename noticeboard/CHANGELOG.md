@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The Notice Board block: post a notice or announce something to the whole colony from its window; citizens' replies are pinned on the board as they come, with how far the word has spread. The lectern and bell keep working as shortcuts.
 - You hear how far your notice has spread: once half the colony knows it, and once everyone does. The reply message also says how many citizens have heard it so far. Needs a Talking Colonists version with broadcast reach.
 
 ## 0.1.0

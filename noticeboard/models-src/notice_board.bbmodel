@@ -895,7 +895,7 @@
       "name": "notice_board_cork.png",
       "path": "",
       "folder": "block",
-      "namespace": "tc_townhall",
+      "namespace": "tc_noticeboard",
       "id": "notice_board_cork",
       "group": "",
       "scope": 0,
