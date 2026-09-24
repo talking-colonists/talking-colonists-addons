@@ -7,7 +7,10 @@ import com.minecolonies.api.colony.ICitizenData;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.IColonyManager;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
+import me.sshcrack.mc_talking.api.ApiFeature;
+import me.sshcrack.mc_talking.api.TalkingColonistsApi;
 import me.sshcrack.mc_talking.api.memory.BroadcastPublishResult;
+import me.sshcrack.mc_talking.api.memory.BroadcastReach;
 import me.sshcrack.mc_talking.api.memory.BroadcastRequest;
 import me.sshcrack.mc_talking.api.memory.BroadcastSource;
 import me.sshcrack.mc_talking.api.memory.CitizenMemoryService;
@@ -34,6 +37,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -68,9 +72,31 @@ public final class Board {
         transient boolean writing;
     }
 
+    /**
+     * A posted notice whose spread the poster hears about: once half the colony knows, and once
+     * everyone does. Outlives the replies, as news keeps spreading; not saved across restarts.
+     */
+    private static final class ReachWatch {
+        final String colonyKey;
+        final String broadcastId;
+        final String title;
+        final UUID posterId;
+        final long until;
+        int milestone;
+
+        ReachWatch(String colonyKey, String broadcastId, String title, UUID posterId, long until) {
+            this.colonyKey = colonyKey;
+            this.broadcastId = broadcastId;
+            this.title = title;
+            this.posterId = posterId;
+            this.until = until;
+        }
+    }
+
     private final MinecraftServer server;
     private final Path file;
     private final List<Notice> notices = new ArrayList<>();
+    private final List<ReachWatch> reach = new ArrayList<>();
     private int ticks;
 
     Board(MinecraftServer server, Path file) {
@@ -128,6 +154,7 @@ public final class Board {
         notice.repliesDue = now() + REPLY_DELAY_TICKS + level.getRandom().nextInt((int) REPLY_SPREAD_TICKS);
         notices.add(notice);
         save();
+        watchReach(colony, result, text.title(), player.getUUID());
         tell(player, "Posted \"" + text.title() + "\". Citizens near the board read it and spread the word; "
                 + "replies get pinned into the book in a few minutes.");
         return true;
@@ -158,6 +185,37 @@ public final class Board {
         return result.isPublished();
     }
 
+    private void watchReach(IColony colony, BroadcastPublishResult result, String title, UUID posterId) {
+        if (result.broadcastId() == null || !TalkingColonistsApi.supports(ApiFeature.BROADCAST_REACH)) return;
+        reach.removeIf(watch -> watch.colonyKey.equals(key(colony)) && watch.title.equals(title));
+        ReachWatch watch = new ReachWatch(key(colony), result.broadcastId(), title, posterId,
+                now() + NOTICE_LIFETIME.toSeconds() * 20);
+        // Only news from here on: a notice read by most of a small colony right away starts at half.
+        watch.milestone = currentReach(watch).map(r -> NoticeText.reachMilestone(r.heard(), r.citizens())).orElse(0);
+        if (watch.milestone < 2) reach.add(watch);
+    }
+
+    private Optional<BroadcastReach> currentReach(ReachWatch watch) {
+        IColony colony = colony(watch.colonyKey);
+        return colony == null ? Optional.empty() : CitizenMemoryService.broadcastReach(colony, watch.broadcastId);
+    }
+
+    private void checkReach() {
+        for (ReachWatch watch : List.copyOf(reach)) {
+            Optional<BroadcastReach> current = currentReach(watch);
+            if (current.isEmpty() || now() > watch.until) {
+                reach.remove(watch); // retracted, expired, or the colony is gone
+                continue;
+            }
+            int milestone = NoticeText.reachMilestone(current.get().heard(), current.get().citizens());
+            if (milestone <= watch.milestone) continue;
+            watch.milestone = milestone;
+            if (milestone == 2) reach.remove(watch);
+            ServerPlayer poster = server.getPlayerList().getPlayer(watch.posterId);
+            if (poster != null) tell(poster, NoticeText.reach(watch.title, current.get().heard(), current.get().citizens()));
+        }
+    }
+
     /** Operators: all notices collect their replies on the next check. */
     public int rush() {
         notices.forEach(notice -> notice.repliesDue = Math.min(notice.repliesDue, now()));
@@ -166,6 +224,7 @@ public final class Board {
 
     void tick() {
         if (++ticks % CHECK_INTERVAL_TICKS != 0) return;
+        checkReach();
         for (Notice notice : List.copyOf(notices)) {
             if (!notice.writing && notice.repliesDue <= now()) collectReply(notice);
         }
@@ -227,6 +286,10 @@ public final class Board {
         lectern.setBook(book);
         String summary = notice.replies.size() + (notice.replies.size() == 1 ? " citizen" : " citizens")
                 + " pinned a reply to \"" + notice.title + "\". Read them on the lectern.";
+        ReachWatch watch = reach.stream().filter(w -> w.colonyKey.equals(notice.colonyKey) && w.title.equals(notice.title))
+                .findFirst().orElse(null);
+        BroadcastReach spread = watch == null ? null : currentReach(watch).orElse(null);
+        if (spread != null) summary += " " + NoticeText.reach(notice.title, spread.heard(), spread.citizens());
         ServerPlayer poster = server.getPlayerList().getPlayer(notice.posterId);
         if (poster != null) tell(poster, summary);
         NoticeBoard.LOGGER.info("Pinned {} replies to notice \"{}\"", notice.replies.size(), notice.title);

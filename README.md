@@ -69,7 +69,9 @@ Put a signed book on a lectern inside your colony and it becomes a notice: the c
 read it first (a Talking Colonists broadcast from "the notice board") and spread it to the others, so
 they bring it up when you talk to them. A few minutes later up to three citizens near the board write
 short replies, worries or petitions, which are pinned into the book as extra pages; read them on the
-lectern. Taking the book down cancels the replies.
+lectern. Taking the book down cancels the replies. As word spreads you hear how far it got: once half
+the colony knows, and once everyone does (with Talking Colonists versions that report it). Watch
+closely and you'll see citizens stop and pass the news on to each other.
 
 Ring a bell inside your colony while holding a signed book and every citizen hears it at once, like
 a town crier (the bell rings as usual).

@@ -50,6 +50,19 @@ public final class NoticeText {
         return "Reply from " + signature + ":\n\n" + reply;
     }
 
+    /** How far a notice has spread: 0 below half the colony, 1 from half on, 2 once everyone heard it. */
+    public static int reachMilestone(int heard, int citizens) {
+        if (citizens <= 0) return 0;
+        if (heard >= citizens) return 2;
+        return heard * 2 >= citizens ? 1 : 0;
+    }
+
+    /** "Word of "Harvest fair" has reached 5 of 12 citizens." */
+    public static String reach(String title, int heard, int citizens) {
+        if (heard >= citizens) return "Word of \"" + title.strip() + "\" has reached every citizen of the colony.";
+        return "Word of \"" + title.strip() + "\" has reached " + heard + " of " + citizens + " citizens.";
+    }
+
     static String cut(String text, int max) {
         if (text.length() <= max) return text;
         return text.substring(0, max - 1).stripTrailing() + "…";

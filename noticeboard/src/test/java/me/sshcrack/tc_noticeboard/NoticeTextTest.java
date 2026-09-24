@@ -17,6 +17,16 @@ class NoticeTextTest {
     }
 
     @Test
+    void reachMilestonesAtHalfAndEveryone() {
+        assertEquals(0, NoticeText.reachMilestone(5, 12));
+        assertEquals(1, NoticeText.reachMilestone(6, 12));
+        assertEquals(2, NoticeText.reachMilestone(12, 12));
+        assertEquals(0, NoticeText.reachMilestone(0, 0));
+        assertEquals("Word of \"Harvest fair\" has reached 6 of 12 citizens.", NoticeText.reach(" Harvest fair", 6, 12));
+        assertEquals("Word of \"Harvest fair\" has reached every citizen of the colony.", NoticeText.reach("Harvest fair", 12, 12));
+    }
+
+    @Test
     void directiveQuotesTheNotice() {
         String directive = NoticeText.replyDirective("Steve", "New wall", "We build a wall.");
         assertTrue(directive.startsWith("Steve pinned a notice titled \"New wall\""));
