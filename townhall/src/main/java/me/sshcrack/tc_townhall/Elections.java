@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Mayoral elections. A player stands by right-clicking their colony's Town Hall block with a signed
@@ -93,6 +94,8 @@ public final class Elections {
         public long votingAt;
         public boolean voting;
         public boolean rivalAsked;
+        /** Colony members were told voting starts in a minute. */
+        public boolean reminded;
         public long votingEndsAt;
         public List<Candidate> candidates = new ArrayList<>();
         /** Citizen id → vote. */
@@ -130,6 +133,7 @@ public final class Elections {
     private final MinecraftServer server;
     private final Path file;
     private final Couriers couriers;
+    private final ElectionBars bars;
     private State state = new State();
     private final Set<UUID> speaking = new HashSet<>();
     private int ticks;
@@ -138,6 +142,7 @@ public final class Elections {
         this.server = server;
         this.file = file;
         this.couriers = new Couriers(server, TownHall.MOD_ID + ":results");
+        this.bars = new ElectionBars(server);
     }
 
     private long now() {
@@ -353,6 +358,15 @@ public final class Elections {
         return view;
     }
 
+    private void showBar(IColony colony, Election election) {
+        long left = Math.max(0, (election.voting ? election.votingEndsAt : election.votingAt) - now());
+        int voters = Math.max(election.votes.size(), voters(colony, election).size());
+        float progress = election.voting ? (voters == 0 ? 0 : (float) election.votes.size() / voters)
+                : 1 - (float) left / CAMPAIGN_TICKS;
+        bars.show(colony, election.id, election.voting,
+                ElectionText.barTitle(election.voting, (int) ((left + 1_199) / 1_200), election.votes.size(), voters), progress);
+    }
+
     /** Operators: every campaign moves on to voting now. */
     public int rush() {
         long now = now();
@@ -378,10 +392,16 @@ public final class Elections {
             }
             if (!election.voting) {
                 if (now() >= election.votingAt) campaignEnds(colony, election);
+                else if (!election.reminded && election.votingAt - now() <= 1_200) {
+                    election.reminded = true;
+                    tellMembers(colony, "Voting for mayor of " + colony.getName() + " starts in a minute.");
+                }
             } else {
                 collectVotes(colony, election);
             }
+            if (state.elections.contains(election)) showBar(colony, election);
         }
+        bars.keepOnly(state.elections.stream().map(election -> election.id).collect(Collectors.toSet()));
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             bringResults(player);
         }
@@ -672,6 +692,7 @@ public final class Elections {
 
     void stopAll() {
         couriers.stopAll();
+        bars.clear();
     }
 
     void load() {

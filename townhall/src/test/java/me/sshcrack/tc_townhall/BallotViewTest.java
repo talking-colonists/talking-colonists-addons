@@ -25,4 +25,11 @@ class BallotViewTest {
         view.minutesLeft = 1;
         assertEquals("Voting: 6 of 11 voted, closes in about a minute.", view.status());
     }
+
+    @Test
+    void bossBarTitle() {
+        assertEquals("Election: voting starts in 14 min", ElectionText.barTitle(false, 14, 0, 0));
+        assertEquals("Election: voting starts in a minute", ElectionText.barTitle(false, 1, 0, 0));
+        assertEquals("Voting for mayor: 6 of 11 voted", ElectionText.barTitle(true, 5, 6, 11));
+    }
 }

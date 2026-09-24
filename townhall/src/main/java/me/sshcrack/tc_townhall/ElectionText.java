@@ -43,6 +43,13 @@ public final class ElectionText {
     private ElectionText() {
     }
 
+    /** The election boss bar's title. */
+    public static String barTitle(boolean voting, int minutesLeft, int voted, int voters) {
+        String minutes = minutesLeft <= 1 ? "a minute" : minutesLeft + " min";
+        return voting ? "Voting for mayor: " + voted + " of " + voters + " voted"
+                : "Election: voting starts in " + minutes;
+    }
+
     /** What citizens at the town hall hear when someone stands for mayor, at most 500 characters. */
     public static String candidacy(String name, String slogan, String platform) {
         String text = platform.strip().replaceAll("\\s+", " ");
