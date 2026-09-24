@@ -30,7 +30,8 @@ final class PlaytestCommand {
                 .then(Commands.literal("home").executes(PlaytestCommand::home))
                 .then(Commands.literal("news").executes(PlaytestCommand::news))
                 .then(Commands.literal("letter").executes(PlaytestCommand::letter))
-                .then(Commands.literal("visitor").executes(PlaytestCommand::visitor)));
+                .then(Commands.literal("visitor").executes(PlaytestCommand::visitor))
+                .then(Commands.literal("notice").executes(PlaytestCommand::notice)));
     }
 
     private static int home(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
@@ -93,6 +94,19 @@ final class PlaytestCommand {
         }
         context.getSource().sendFailure(Component.literal("[Playtest] No visitor is at the tavern right now; one arrives every few minutes."));
         return 0;
+    }
+
+    /** A lectern and a signed notice to put on it. */
+    private static int notice(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        ItemStack notice = WrittenBooks.create("Harvest fair", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
+                List.of(Component.literal("Next Sunday we hold a harvest fair at the town hall. Bring your best pumpkins; "
+                        + "the finest wins a golden hoe. Who wants to help build the stalls?")));
+        for (ItemStack stack : List.of(new ItemStack(net.minecraft.world.item.Items.LECTERN), notice)) {
+            if (!player.getInventory().add(stack)) player.drop(stack, false);
+        }
+        context.getSource().sendSuccess(() -> Component.literal("[Playtest] Place the lectern in the colony, then put the notice on it."), false);
+        return 1;
     }
 
     private static IColony colony(ServerPlayer player) {

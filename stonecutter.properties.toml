@@ -66,6 +66,13 @@ mod.group = "me.sshcrack.tc_tavern"
 mod.version = "0.1.0"
 mod.description = "Talk to tavern visitors and talk them into joining your colony for less"
 
+[noticeboard]
+mod.id = "tc_noticeboard"
+mod.name = "Talking Colonists: Notice Board"
+mod.group = "me.sshcrack.tc_noticeboard"
+mod.version = "0.1.0"
+mod.description = "Post notices on a lectern for your citizens to read, spread and answer, and address the colony by loudspeaker"
+
 [playtest]
 mod.id = "tc_playtest"
 mod.name = "Talking Colonists Addons: Playtest"

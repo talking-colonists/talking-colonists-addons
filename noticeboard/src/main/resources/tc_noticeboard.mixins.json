@@ -1,0 +1,9 @@
+{
+  "required": true,
+  "package": "me.sshcrack.tc_noticeboard.mixin",
+  "compatibilityLevel": "${java}",
+  "mixins": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -52,4 +52,29 @@ public final class WrittenBooks {
         *//*?}*/
         return book;
     }
+
+    /** Adds pages to the end of a signed book in place, keeping at most {@link BookPages#MAX_PAGES}. */
+    public static void appendPages(ItemStack book, List<Component> pages) {
+        /*? if neoforge {*/
+        WrittenBookContent content = book.get(DataComponents.WRITTEN_BOOK_CONTENT);
+        if (content == null) return;
+        List<Filterable<Component>> all = new java.util.ArrayList<>(content.pages());
+        for (Component page : pages) {
+            if (all.size() >= BookPages.MAX_PAGES) break;
+            all.add(Filterable.passThrough(page));
+        }
+        book.set(DataComponents.WRITTEN_BOOK_CONTENT, new WrittenBookContent(content.title(), content.author(),
+                content.generation(), all, true));
+        /*?}*/
+        /*? if forge {*/
+        /*CompoundTag tag = book.getTag();
+        if (tag == null) return;
+        ListTag all = tag.getList("pages", net.minecraft.nbt.Tag.TAG_STRING);
+        for (Component page : pages) {
+            if (all.size() >= BookPages.MAX_PAGES) break;
+            all.add(StringTag.valueOf(Component.Serializer.toJson(page)));
+        }
+        tag.put("pages", all);
+        *//*?}*/
+    }
 }

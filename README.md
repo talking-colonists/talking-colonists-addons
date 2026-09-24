@@ -10,6 +10,7 @@ they only share this repository and its build.
 | Campfire Nights | [`campfire/`](campfire) | At dusk, citizens gather around a campfire and tell each other stories. |
 | Postal Service | [`postal/`](postal) | Write letters to your citizens and get in-character replies in your mailbox. |
 | Tavern Recruiter | [`tavern/`](tavern) | Talk to tavern visitors and talk them into joining for less. |
+| Notice Board | [`noticeboard/`](noticeboard) | Post notices on a lectern for citizens to spread and answer; address the colony by loudspeaker. |
 
 Every addon builds for **1.21.1 NeoForge** and **1.20.1 Forge** from one source tree, using
 [Stonecutter](https://stonecutter.kikugie.dev/), and needs Talking Colonists 2.1 or newer.
@@ -61,6 +62,17 @@ costs and may haggle: make a good case (a job that suits them, kindness, a fair 
 their recruit cost through the `negotiate_recruit_cost` tool, which the server limits to small steps,
 never below half the original price and at most three changes a day. The new price shows up in
 MineColonies' recruit window, and the visitor remembers the deal after they join.
+
+## Notice Board
+
+Put a signed book on a lectern inside your colony and it becomes a notice: the citizens near the board
+read it first (a Talking Colonists broadcast from "the notice board") and spread it to the others, so
+they bring it up when you talk to them. A few minutes later up to three citizens near the board write
+short replies, worries or petitions, which are pinned into the book as extra pages; read them on the
+lectern. Taking the book down cancels the replies.
+
+- `/loudspeaker <message>` tells every citizen of your colony at once.
+- `/noticeboard rush` (operators) makes waiting notices collect their replies now.
 
 ## Layout
 

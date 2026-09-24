@@ -1,5 +1,5 @@
 // GENERATED from shared/: edit it there, then run ./gradlew syncShared
-package me.sshcrack.tc_gazette.shared.book;
+package me.sshcrack.tc_noticeboard.shared.book;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;

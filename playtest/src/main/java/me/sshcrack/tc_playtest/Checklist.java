@@ -48,7 +48,12 @@ final class Checklist {
                     new Button("Collect mail", "/mail", "Take the replies from your mailbox"))),
             new Section("tc_tavern", "Tavern Recruiter",
                     "Talk to a tavern visitor and ask them to join for less; a good case lowers their price.", List.of(
-                    new Button("Go to a visitor", "/playtest visitor", "Teleport next to a tavern visitor"))));
+                    new Button("Go to a visitor", "/playtest visitor", "Teleport next to a tavern visitor"))),
+            new Section("tc_noticeboard", "Notice Board",
+                    "Put a signed book on a lectern in the colony; citizens spread it and pin replies into it.", List.of(
+                    new Button("Get a notice", "/playtest notice", "A lectern and a signed notice to put on it"),
+                    new Button("Replies now", "/noticeboard rush", "Citizens write their replies within seconds"),
+                    new Button("Loudspeaker", "/loudspeaker ", "Type a message every citizen hears"))));
 
     private Checklist() {
     }
@@ -71,7 +76,9 @@ final class Checklist {
     private static Component button(Button button) {
         return Component.literal("[" + button.label() + "]").withStyle(Style.EMPTY
                 .withColor(ChatFormatting.AQUA)
-                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, button.command()))
+                // A command ending in a space still needs text: put it in the chat box instead of running it.
+                .withClickEvent(new ClickEvent(button.command().endsWith(" ") ? ClickEvent.Action.SUGGEST_COMMAND
+                        : ClickEvent.Action.RUN_COMMAND, button.command()))
                 .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
                         Component.literal(button.hint() + "\n" + button.command()))));
     }
