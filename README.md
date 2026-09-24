@@ -30,6 +30,7 @@ the key's quota is used up or all background slots are busy; the gazette retries
 
 ```
 build.neoforge.gradle.kts, build.forge.gradle.kts   shared loader build scripts
+playtest/                                            dev-only mod for scripts/playtest.sh (never released)
 build-logic/                                         shared Gradle plugin (mods.toml, publishing, ...)
 stonecutter.properties.toml                          shared properties, plus one table per addon
 <addon>/src/                                         the addon's code and resources
@@ -46,6 +47,25 @@ Each addon is a Stonecutter *branch*. Gradle projects are named `:<addon>:<versi
    `mod.group`, `mod.version` and `mod.description`.
 3. Create `<addon>/src/main/...` with a `<mod id>.mixins.json`, the icon, and the code, and a
    `<addon>/CHANGELOG.md`.
+
+## Playtest
+
+One command starts a dev client with every addon loaded:
+
+```sh
+bash scripts/playtest.sh            # 1.21.1 NeoForge   (forge: 1.20.1 Forge, both: two clients)
+bash scripts/playtest.sh --fresh    # start over with a new test world
+```
+
+The first launch creates the creative superflat world `TC_Playtest`, later launches open it directly.
+When you join, the dev-only `playtest/` mod builds the colony "Playtest Hollow" next to you: town
+hall, school with a teacher, library with a student, tavern with a visitor, two houses, six citizens
+and a campfire. Chat shows a clickable checklist for every addon (`/playtest` shows it again).
+
+The Gemini key comes from the main repository's dev config (`../talking-colonists`), or from
+`TC_ADDONS_KEY_FILE`. It is never printed.
+
+When you add an addon, add its section to `playtest/.../Checklist.java`.
 
 ## Build and run
 

@@ -31,6 +31,12 @@ platform {
 	}
 }
 
+// The dev-only playtest mod (playtest/) runs every addon of this version in one client, in a
+// ready-made world (scripts/playtest.sh). Other addons get an empty list.
+val playtestAddons: List<Project> = if (project.parent?.name != "playtest") emptyList() else
+	rootProject.subprojects.filter { it.name == project.name && it.parent?.parent == rootProject && it.parent?.name != "playtest" }
+playtestAddons.forEach { evaluationDependsOn(it.path) }
+
 legacyForge {
 	version = "${prop("deps.minecraft")}-${prop("deps.forge")}"
 
@@ -46,6 +52,10 @@ legacyForge {
 			gameDirectory = file("run/")
 			ideName = "Forge Client (${sc.current.version})"
 			programArgument("--username=Dev")
+			// Straight into the playtest world once the playtest mod has created it.
+			if (playtestAddons.isNotEmpty() && file("run/saves/TC_Playtest").isDirectory) {
+				programArguments.addAll("--quickPlaySingleplayer", "TC_Playtest")
+			}
 		}
 		register("server") {
 			server()
@@ -65,6 +75,11 @@ legacyForge {
 	mods {
 		register(prop("mod.id")) {
 			sourceSet(sourceSets["main"])
+		}
+		playtestAddons.forEach { addon ->
+			register(addon.prop("mod.id")) {
+				sourceSet(addon.sourceSets["main"])
+			}
 		}
 	}
 }
@@ -126,6 +141,8 @@ repositories {
 }
 
 dependencies {
+    // Playtest only: the other addons' classes and resources.
+    playtestAddons.forEach { runtimeOnly(it.sourceSets["main"].output) }
     testImplementation(platform("org.junit:junit-bom:5.14.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     // Unit tests cover plain logic only and do not load Minecraft.
@@ -144,7 +161,8 @@ dependencies {
     modRuntimeOnly("me.sshcrack:gemini_live_lib:${prop("deps.gemini_live_lib_version")}-${prop("deps.minecraft")}-forge")
     modRuntimeOnly("dev.isxander:yet-another-config-lib:${prop("deps.yacl_version")}+${prop("deps.minecraft")}-forge")
     modRuntimeOnly("com.ldtteam:domum_ornamentum:${prop("deps.domum_version")}:universal")
-    modRuntimeOnly("com.ldtteam:structurize:${prop("deps.structurize_version")}")
+    // Compile-visible because MineColonies hut blocks extend Structurize types (the playtest places huts).
+    modImplementation("com.ldtteam:structurize:${prop("deps.structurize_version")}")
     modRuntimeOnly("com.ldtteam:blockui:${prop("deps.blockui_version")}")
 }
 

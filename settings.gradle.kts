@@ -19,9 +19,10 @@ plugins {
 
 stonecutter {
 	create(rootProject) {
-		// Every addon is a Stonecutter branch: its own directory with src/ and stonecutter.properties.toml,
+		// Every addon is a Stonecutter branch: its own directory with src/, and a table in stonecutter.properties.toml,
 		// built for each loader by the shared build.<loader>.gradle.kts scripts at the repository root.
-		for (addon in listOf("gazette")) branch(addon) {
+		// "playtest" is a dev-only mod that runs every addon together (scripts/playtest.sh); it is never released.
+		for (addon in listOf("gazette", "playtest")) branch(addon) {
 			version("1.21.1-neoforge", "1.21.1").buildscript = "../build.neoforge.gradle.kts"
 			version("1.20.1-forge", "1.20.1").buildscript = "../build.forge.gradle.kts"
 		}

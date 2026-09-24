@@ -44,3 +44,10 @@ mod.name = "Talking Colonists: Colony Gazette"
 mod.group = "me.sshcrack.tc_gazette"
 mod.version = "0.1.0"
 mod.description = "The colony writes a daily newspaper about yesterday's events, in a citizen's own words"
+
+[playtest]
+mod.id = "tc_playtest"
+mod.name = "Talking Colonists Addons: Playtest"
+mod.group = "me.sshcrack.tc_playtest"
+mod.version = "0.0.0"
+mod.description = "Dev only, never released: sets up a test world with a colony and runs every addon together"
