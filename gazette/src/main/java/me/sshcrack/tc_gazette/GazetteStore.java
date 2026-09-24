@@ -1,18 +1,13 @@
 package me.sshcrack.tc_gazette;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import me.sshcrack.tc_gazette.shared.store.JsonFile;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -21,11 +16,8 @@ import java.util.UUID;
 
 /**
  * Per-colony gazette state, saved as JSON in the world folder. Only touched on the server thread.
- * A plain file keeps the format the same on both loaders.
  */
 public final class GazetteStore {
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-
     private final Path file;
     private final Map<String, ColonyState> colonies = new HashMap<>();
 
@@ -54,9 +46,9 @@ public final class GazetteStore {
 
     public void load() {
         colonies.clear();
-        if (!Files.isRegularFile(file)) return;
         try {
-            JsonObject root = JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8)).getAsJsonObject();
+            JsonObject root = JsonFile.read(file);
+            if (root == null) return;
             for (Map.Entry<String, JsonElement> entry : root.entrySet()) {
                 if (!(entry.getValue() instanceof JsonObject json)) continue;
                 ColonyState state = new ColonyState();
@@ -94,10 +86,7 @@ public final class GazetteStore {
             root.add(key, json);
         });
         try {
-            Files.createDirectories(file.getParent());
-            Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
-            Files.writeString(tmp, GSON.toJson(root), StandardCharsets.UTF_8);
-            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            JsonFile.write(file, root);
         } catch (IOException e) {
             ColonyGazette.LOGGER.error("Could not save {}", file, e);
         }

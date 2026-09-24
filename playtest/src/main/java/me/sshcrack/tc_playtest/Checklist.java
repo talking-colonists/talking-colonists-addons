@@ -40,7 +40,12 @@ final class Checklist {
             new Section("tc_campfire", "Campfire Nights",
                     "At dusk, idle citizens tell stories at the campfire. Stand close and chat to join in.", List.of(
                     new Button("Start now", "/campfire start", "Gather idle citizens at the nearest campfire (uses Gemini Live)"),
-                    new Button("Stop", "/campfire stop", "End the campfire night"))));
+                    new Button("Stop", "/campfire stop", "End the campfire night"))),
+            new Section("tc_postal", "Postal Service",
+                    "Sign a book with a citizen's name as its title and right-click the courier (or the citizen) with it.", List.of(
+                    new Button("Get a test letter", "/playtest letter", "A signed letter to a random citizen of the colony"),
+                    new Button("Deliver now", "/mail rush", "Your letters arrive within seconds"),
+                    new Button("Collect mail", "/mail", "Take the replies from your mailbox"))));
 
     private Checklist() {
     }

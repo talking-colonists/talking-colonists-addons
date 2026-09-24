@@ -141,12 +141,17 @@ abstract class ModPlatformPlugin @Inject constructor() : Plugin<Project> {
 	@Suppress("UnstableApiUsage")
 	private fun Project.configureProcessResources(ctx: Context) {
 		// KSP only creates its output folder when it generates something, which it does not for a
-		// mod without mixins; processResources still lists that folder as an input.
+		// mod without mixins; processResources still lists that folder as an input. An up-to-date or
+		// cached kspKotlin never runs a doLast, so the folder is also created before processResources.
+		val kspOutput = layout.buildDirectory.dir("generated/ksp")
 		tasks.matching { it.name == "kspKotlin" }.configureEach {
-			doLast { layout.buildDirectory.dir("generated/ksp").get().asFile.mkdirs() }
+			doLast { kspOutput.get().asFile.mkdirs() }
+		}
+		val createKspOutput = tasks.register("createKspOutputDir") {
+			doLast { kspOutput.get().asFile.mkdirs() }
 		}
 		tasks.named<ProcessResources>("processResources") {
-			dependsOn(tasks.named("stonecutterGenerate"), "kspKotlin")
+			dependsOn(tasks.named("stonecutterGenerate"), "kspKotlin", createKspOutput)
 			filesMatching("*.mixins.json") {
 				expand("java" to "JAVA_${ctx.javaVersion.majorVersion}")
 			}

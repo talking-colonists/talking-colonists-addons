@@ -83,7 +83,9 @@ subprojects {
 // that shipped the same package could not be loaded together. Edit the shared/ copy, then run
 // `./gradlew syncShared`; `verifyShared` (run by CI) fails when a copy is out of date.
 val sharedPackages = mapOf(
-	"gazette" to listOf("book"),
+	"gazette" to listOf("book", "provider", "store"),
+	"postal" to listOf("book", "provider", "store"),
+	"playtest" to listOf("book"),
 )
 val sharedHeader = "// GENERATED from shared/: edit it there, then run ./gradlew syncShared\n"
 
@@ -135,5 +137,12 @@ tasks.register("verifyShared") {
 			throw GradleException("Shared code copies are out of date; run ./gradlew syncShared:\n" +
 				wrong.joinToString("\n") { "  " + it.relativeTo(rootDir) })
 		}
+	}
+}
+
+// Stonecutter must see the synced copies when both run in one build.
+subprojects {
+	tasks.matching { it.name == "stonecutterGenerate" }.configureEach {
+		mustRunAfter(rootProject.tasks.named("syncShared"))
 	}
 }

@@ -8,6 +8,7 @@ they only share this repository and its build.
 |---|---|---|
 | Colony Gazette | [`gazette/`](gazette) | The colony writes a daily newspaper about yesterday's events, in a citizen's own words. |
 | Campfire Nights | [`campfire/`](campfire) | At dusk, citizens gather around a campfire and tell each other stories. |
+| Postal Service | [`postal/`](postal) | Write letters to your citizens and get in-character replies in your mailbox. |
 
 Every addon builds for **1.21.1 NeoForge** and **1.20.1 Forge** from one source tree, using
 [Stonecutter](https://stonecutter.kikugie.dev/), and needs Talking Colonists 2.1 or newer.
@@ -37,6 +38,20 @@ night per day, and only when Talking Colonists has spare speech capacity. The ni
 news, so the Gazette may report it.
 
 - `/campfire start` (operators) starts one at the nearest campfire right away; `/campfire stop` ends it.
+
+## Postal Service
+
+Write a letter in a book and quill and sign it with the recipient's name as the title ("Anna",
+"Dear Anna Smith" and "To: Anna" all work). Right-click the colony's courier with it, or the
+recipient in person; without a courier any citizen passes it on. A few minutes later the recipient
+writes back in character, and the reply waits in your mailbox:
+
+- `/mail` takes your letters (you get a chat message with a [Collect] link when one arrives).
+- `/mail rush` (operators) makes your letters arrive right away.
+
+The citizen remembers the exchange (a confirmed Talking Colonists memory), so they can bring it up
+when you talk. The recipient has to be loaded to write back; letters wait for them, and come back
+undelivered after three in-game days or if the citizen left the colony.
 
 ## Layout
 

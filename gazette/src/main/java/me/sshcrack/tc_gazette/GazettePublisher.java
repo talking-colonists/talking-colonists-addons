@@ -11,12 +11,9 @@ import me.sshcrack.mc_talking.api.TalkingColonistsApi;
 import me.sshcrack.mc_talking.api.colony.AddonColonyEvent;
 import me.sshcrack.mc_talking.api.colony.ColonyEventService;
 import me.sshcrack.mc_talking.api.colony.ColonyEventView;
-import me.sshcrack.mc_talking.api.provider.ProviderBudgetService;
-import me.sshcrack.mc_talking.api.provider.ProviderBudgetView;
-import me.sshcrack.mc_talking.api.provider.ProviderConfigView;
-import me.sshcrack.mc_talking.api.provider.ProviderQuotaState;
 import me.sshcrack.mc_talking.api.text.CitizenTextService;
 import me.sshcrack.mc_talking.api.text.TextRequest;
+import me.sshcrack.tc_gazette.shared.provider.TextCapacity;
 import me.sshcrack.mc_talking.api.text.TextResult;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
@@ -134,7 +131,7 @@ public final class GazettePublisher {
             skipDay(state, day, now);
             return;
         }
-        if (!hasSpareCapacity()) return;
+        if (!TextCapacity.hasSpare()) return;
         publish(colony, day, news, null);
     }
 
@@ -221,20 +218,6 @@ public final class GazettePublisher {
         }
         Collections.reverse(news);
         return news;
-    }
-
-    static boolean hasSpareCapacity() {
-        if (!TalkingColonistsApi.supports(ApiFeature.PROVIDER_BUDGET)) return true;
-        ProviderConfigView config = ProviderBudgetService.config();
-        if (!config.apiKeySet()) return false;
-        ProviderBudgetView budget = ProviderBudgetService.snapshot();
-        if (budget.background().available() <= 0) return false;
-        // Text requests fall back to the Live model when the text model is out of quota.
-        return usable(budget, config.textModel()) || usable(budget, config.liveModel());
-    }
-
-    private static boolean usable(ProviderBudgetView budget, String model) {
-        return budget.model(model).map(view -> view.state() == ProviderQuotaState.OK).orElse(true);
     }
 
     /** The teacher writes the paper; failing that a library student; failing that the colony itself. */

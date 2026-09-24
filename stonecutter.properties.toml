@@ -52,6 +52,13 @@ mod.group = "me.sshcrack.tc_campfire"
 mod.version = "0.1.0"
 mod.description = "At dusk, citizens gather around a campfire and tell each other stories from their memories"
 
+[postal]
+mod.id = "tc_postal"
+mod.name = "Talking Colonists: Postal Service"
+mod.group = "me.sshcrack.tc_postal"
+mod.version = "0.1.0"
+mod.description = "Write letters to your citizens and get in-character replies in your mailbox"
+
 [playtest]
 mod.id = "tc_playtest"
 mod.name = "Talking Colonists Addons: Playtest"
