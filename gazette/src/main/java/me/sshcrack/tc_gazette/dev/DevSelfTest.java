@@ -10,7 +10,7 @@ import me.sshcrack.tc_gazette.GazetteBook;
 import me.sshcrack.tc_gazette.GazetteIssue;
 import me.sshcrack.tc_gazette.GazettePublisher;
 import me.sshcrack.tc_gazette.GazetteStore;
-import me.sshcrack.tc_gazette.book.WrittenBooks;
+import me.sshcrack.tc_gazette.shared.book.WrittenBooks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;

@@ -1,7 +1,7 @@
 package me.sshcrack.tc_gazette;
 
-import me.sshcrack.tc_gazette.book.BookPages;
-import me.sshcrack.tc_gazette.book.WrittenBooks;
+import me.sshcrack.tc_gazette.shared.book.BookPages;
+import me.sshcrack.tc_gazette.shared.book.WrittenBooks;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;

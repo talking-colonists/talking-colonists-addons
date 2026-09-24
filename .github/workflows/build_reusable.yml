@@ -71,7 +71,7 @@ jobs:
         run: ./gradlew :1.21.1-neoforge:publishToMavenLocal :1.20.1-forge:publishToMavenLocal --no-daemon
 
       - name: Build with Gradle
-        run: ./gradlew buildAndCollect --no-daemon
+        run: ./gradlew verifyShared buildAndCollect --no-daemon
 
       - name: Upload artifacts
         id: upload

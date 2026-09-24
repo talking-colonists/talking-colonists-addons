@@ -44,6 +44,7 @@ news, so the Gazette may report it.
 build.neoforge.gradle.kts, build.forge.gradle.kts   shared loader build scripts
 playtest/                                            dev-only mod for scripts/playtest.sh (never released)
 icons/<addon>.svg                                    addon icons; scripts/render-icons.sh renders the PNGs
+shared/src/                                          code several addons use (see "Shared code")
 build-logic/                                         shared Gradle plugin (mods.toml, publishing, ...)
 stonecutter.properties.toml                          shared properties, plus one table per addon
 <addon>/src/                                         the addon's code and resources
@@ -52,6 +53,15 @@ stonecutter.properties.toml                          shared properties, plus one
 
 Each addon is a Stonecutter *branch*. Gradle projects are named `:<addon>:<version>`, e.g.
 `:gazette:1.21.1-neoforge`.
+
+### Shared code
+
+Code that several addons need (for example `book`: written books on both loaders) lives once in
+`shared/src/{main,test}/java/me/sshcrack/tc_shared/<package>/`. It is copied into each addon that
+lists the package in `sharedPackages` (`stonecutter.gradle.kts`), under the addon's own package
+`<mod group>.shared.<package>`, because two mods that ship the same Java package cannot be loaded
+together. Edit the `shared/` version and run `./gradlew syncShared`; CI runs `verifyShared`, which
+fails when a copy is out of date. The copies are committed, so each addon still builds on its own.
 
 ### Adding an addon
 

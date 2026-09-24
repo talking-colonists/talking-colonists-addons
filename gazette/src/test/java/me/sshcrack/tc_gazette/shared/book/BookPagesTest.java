@@ -1,4 +1,5 @@
-package me.sshcrack.tc_gazette.book;
+// GENERATED from shared/: edit it there, then run ./gradlew syncShared
+package me.sshcrack.tc_gazette.shared.book;
 
 import org.junit.jupiter.api.Test;
 

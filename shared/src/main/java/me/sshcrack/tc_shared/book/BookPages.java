@@ -1,4 +1,4 @@
-package me.sshcrack.tc_gazette.book;
+package me.sshcrack.tc_shared.book;
 
 import java.util.ArrayList;
 import java.util.List;
