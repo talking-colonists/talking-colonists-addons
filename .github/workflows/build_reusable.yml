@@ -1,0 +1,81 @@
+name: reusable-build
+on:
+  workflow_call:
+    inputs:
+      release:
+        description: "Whether this is a release build"
+        type: boolean
+        default: false
+    outputs:
+      artifact-name:
+        description: "Name of the uploaded build artifact"
+        value: ${{ jobs.build.outputs.artifact-name }}
+
+jobs:
+  build:
+    name: Build Project
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-name: ${{ steps.upload.outputs.artifact-name }}
+
+    env:
+      MOD_IS_RELEASE: ${{ inputs.release }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 25
+          distribution: 'microsoft'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # Addons may target a Talking Colonists version that is not released yet. Then build it from the
+      # main branch into Maven Local (local only: nothing is published).
+      - name: Check Talking Colonists dependency
+        id: tc
+        run: |
+          version=$(sed -n 's/^deps.talking_colonists_version=//p' gradle.properties)
+          url="https://maven.sshcrack.me/releases/me/sshcrack/mc_talking-api/${version}-1.21.1-neoforge/mc_talking-api-${version}-1.21.1-neoforge.pom"
+          if curl -sfI "$url" > /dev/null; then echo "released=true" >> "$GITHUB_OUTPUT"; else echo "released=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Checkout Talking Colonists
+        if: steps.tc.outputs.released == 'false'
+        uses: actions/checkout@v4
+        with:
+          repository: talking-colonists/talking-colonists
+          path: .talking-colonists
+          fetch-depth: 1
+
+      - name: Install Talking Colonists into Maven Local
+        if: steps.tc.outputs.released == 'false'
+        working-directory: .talking-colonists
+        run: ./gradlew :1.21.1-neoforge:publishToMavenLocal :1.20.1-forge:publishToMavenLocal --no-daemon
+
+      - name: Build with Gradle
+        run: ./gradlew buildAndCollect --no-daemon
+
+      - name: Upload artifacts
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: build/libs/
