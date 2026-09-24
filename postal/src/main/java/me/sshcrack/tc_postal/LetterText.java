@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Predicate;
 
 /** Pure letter logic: who a letter is for, what the recipient is asked, and reading the answer. */
 public final class LetterText {
@@ -40,7 +41,7 @@ public final class LetterText {
         return unique(names, name -> firstName(name).equals(wanted));
     }
 
-    private static int unique(List<String> names, java.util.function.Predicate<String> test) {
+    private static int unique(List<String> names, Predicate<String> test) {
         int found = NOT_FOUND;
         for (int i = 0; i < names.size(); i++) {
             if (!test.test(names.get(i))) continue;

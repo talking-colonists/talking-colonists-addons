@@ -24,6 +24,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.network.chat.MutableComponent;
 
 /**
  * Takes letters from players, has the recipient write back through Talking Colonists once the letter
@@ -288,7 +289,7 @@ public final class PostOffice {
         player.sendSystemMessage(prefix().append(Component.literal(text).withStyle(ChatFormatting.GRAY)));
     }
 
-    private static net.minecraft.network.chat.MutableComponent prefix() {
+    private static MutableComponent prefix() {
         return Component.literal("[Post] ").withStyle(ChatFormatting.GOLD);
     }
 

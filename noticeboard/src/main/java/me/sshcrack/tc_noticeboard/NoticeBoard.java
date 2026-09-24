@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import me.sshcrack.tc_noticeboard.dev.DevSelfTest;
 
 /** Mod entry point: lecterns as notice boards, and bells as the colony's town crier. */
 @Mod(NoticeBoard.MOD_ID)
@@ -112,6 +113,6 @@ public class NoticeBoard {
         PENDING.clear();
         board.tick();
         // Only referenced when enabled, so the class (left out of the release jar) is never loaded otherwise.
-        if (SELF_TEST && server != null) me.sshcrack.tc_noticeboard.dev.DevSelfTest.tick(server);
+        if (SELF_TEST && server != null) DevSelfTest.tick(server);
     }
 }

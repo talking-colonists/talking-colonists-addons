@@ -25,6 +25,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import me.sshcrack.tc_gazette.dev.DevSelfTest;
 
 /** Mod entry point: wires the gazette to server start, stop, ticks and commands. */
 @Mod(ColonyGazette.MOD_ID)
@@ -78,7 +79,7 @@ public class ColonyGazette {
         if (publisher == null) return;
         publisher.tick();
         // Only referenced when enabled, so the class (left out of the release jar) is never loaded otherwise.
-        if (SELF_TEST && server != null) me.sshcrack.tc_gazette.dev.DevSelfTest.tick(server);
+        if (SELF_TEST && server != null) DevSelfTest.tick(server);
     }
 
     private static void start(MinecraftServer startedServer) {

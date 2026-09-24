@@ -115,9 +115,10 @@ public final class Gathering {
         if (handle == null) return;
         if (handle.state() == AutonomousDiscussionHandle.State.PAUSED
                 && handle.pauseReason().orElse(null) != AutonomousDiscussionHandle.PauseReason.CALLER) {
-            // Paused for capacity or because a player spoke to a teller: try again now and then, then give up.
+            // Paused for capacity, because someone nearby is speaking, or because a player spoke to a
+            // teller: try again every couple of seconds, then give up.
             pausedTicks++;
-            if (pausedTicks % 200 == 0) handle.resume();
+            if (pausedTicks % 40 == 0) handle.resume();
             if (pausedTicks >= PAUSED_GIVE_UP_TICKS) finish("The fire burned down while everyone waited");
         } else {
             pausedTicks = 0;

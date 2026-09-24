@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import me.sshcrack.tc_tavern.dev.DevSelfTest;
 
 /**
  * Mod entry point: lets players talk to tavern visitors, tells visitors they may haggle over their
@@ -94,6 +95,6 @@ public class TavernRecruiter {
 
     private static void tick() {
         // Only referenced when enabled, so the class (left out of the release jar) is never loaded otherwise.
-        if (SELF_TEST && server != null) me.sshcrack.tc_tavern.dev.DevSelfTest.tick(server);
+        if (SELF_TEST && server != null) DevSelfTest.tick(server);
     }
 }

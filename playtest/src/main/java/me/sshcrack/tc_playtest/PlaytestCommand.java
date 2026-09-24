@@ -15,6 +15,8 @@ import net.minecraft.world.item.ItemStack;
 import me.sshcrack.tc_playtest.shared.book.WrittenBooks;
 
 import java.util.List;
+import com.minecolonies.api.colony.IVisitorData;
+import net.minecraft.world.item.Items;
 
 /** {@code /playtest}: the checklist, plus small helpers its buttons use. */
 final class PlaytestCommand {
@@ -85,7 +87,7 @@ final class PlaytestCommand {
         if (colony == null) return 0;
         for (var data : colony.getVisitorManager().getCivilianDataMap().values()) {
             var entity = data.getEntity().orElse(null);
-            if (!(data instanceof com.minecolonies.api.colony.IVisitorData visitor) || entity == null) continue;
+            if (!(data instanceof IVisitorData visitor) || entity == null) continue;
             player.teleportTo(entity.getX() + 1.5, entity.getY(), entity.getZ());
             var cost = visitor.getRecruitCost();
             context.getSource().sendSuccess(() -> Component.literal("[Playtest] " + data.getName() + " asks "
@@ -104,8 +106,8 @@ final class PlaytestCommand {
                         + "the finest wins a golden hoe. Who wants to help build the stalls?")));
         ItemStack crier = WrittenBooks.create("Fair today", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
                 List.of(Component.literal("The harvest fair starts at noon at the town hall. Everyone is welcome!")));
-        for (ItemStack stack : List.of(new ItemStack(net.minecraft.world.item.Items.LECTERN), notice,
-                new ItemStack(net.minecraft.world.item.Items.BELL), crier)) {
+        for (ItemStack stack : List.of(new ItemStack(Items.LECTERN), notice,
+                new ItemStack(Items.BELL), crier)) {
             if (!player.getInventory().add(stack)) player.drop(stack, false);
         }
         context.getSource().sendSuccess(() -> Component.literal("[Playtest] Place the lectern in the colony and put \"Harvest fair\" on it. Place the bell and ring it holding \"Fair today\"."), false);

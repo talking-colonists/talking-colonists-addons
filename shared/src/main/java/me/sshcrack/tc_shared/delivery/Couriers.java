@@ -19,6 +19,13 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Citizens who walk up to a player and hand them an item, so nothing has to be fetched by command.
@@ -67,10 +74,10 @@ public final class Couriers {
 
     private final MinecraftServer server;
     private final String ownerId;
-    private final org.slf4j.Logger logger;
+    private final Logger logger;
     private final List<Job> jobs = new ArrayList<>();
     /** Carriers who just got stuck, and the tick until which someone else goes instead. */
-    private final java.util.Map<java.util.UUID, Integer> resting = new java.util.HashMap<>();
+    private final Map<UUID, Integer> resting = new HashMap<>();
     private int now;
     static final int REST_TICKS = 20 * 60;
 
@@ -78,7 +85,7 @@ public final class Couriers {
     public Couriers(MinecraftServer server, String ownerId) {
         this.server = server;
         this.ownerId = ownerId;
-        this.logger = org.slf4j.LoggerFactory.getLogger(ownerId);
+        this.logger = LoggerFactory.getLogger(ownerId);
     }
 
     /** Whether a delivery with this key is on its way. */
@@ -176,8 +183,8 @@ public final class Couriers {
         // moveTo(entity) walks to the player's block position, which is not walkable while they jump or
         // fly. Aim at the block above what the player stands on instead, and take the path back whenever
         // the citizen's own AI (wandering, work) sent them somewhere else.
-        net.minecraft.core.BlockPos feet = player.getOnPos().above();
-        net.minecraft.core.BlockPos heading = job.carrier.getNavigation().getTargetPos();
+        BlockPos feet = player.getOnPos().above();
+        BlockPos heading = job.carrier.getNavigation().getTargetPos();
         boolean offCourse = heading == null || heading.distSqr(feet) > 4 || job.carrier.getNavigation().isDone();
         if (job.ticks % 10 == 1 && offCourse) {
             job.carrier.getNavigation().moveTo(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, WALK_SPEED);
@@ -202,7 +209,7 @@ public final class Couriers {
             return;
         }
         job.carrier.getNavigation().stop();
-        job.carrier.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        job.carrier.swing(InteractionHand.MAIN_HAND);
         if (!player.getInventory().add(stack)) player.drop(stack, false);
         // Release the reservation first: it marks the citizen busy, and busy citizens cannot speak.
         finish(job, true);

@@ -16,6 +16,7 @@ import net.minecraft.nbt.StringTag;
 *//*?}*/
 
 import java.util.List;
+import java.util.ArrayList;
 
 /** Builds signed written books on both loaders (data components on 1.21.1, NBT on 1.20.1). */
 public final class WrittenBooks {
@@ -58,7 +59,7 @@ public final class WrittenBooks {
         /*? if neoforge {*/
         WrittenBookContent content = book.get(DataComponents.WRITTEN_BOOK_CONTENT);
         if (content == null) return;
-        List<Filterable<Component>> all = new java.util.ArrayList<>(content.pages());
+        List<Filterable<Component>> all = new ArrayList<>(content.pages());
         for (Component page : pages) {
             if (all.size() >= BookPages.MAX_PAGES) break;
             all.add(Filterable.passThrough(page));

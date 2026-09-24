@@ -23,6 +23,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import me.sshcrack.tc_campfire.dev.DevSelfTest;
 
 /** Mod entry point: wires campfire nights to server start, stop, ticks, chat and commands. */
 @Mod(CampfireNights.MOD_ID)
@@ -74,6 +75,6 @@ public class CampfireNights {
         if (director == null) return;
         director.tick();
         // Only referenced when enabled, so the class (left out of the release jar) is never loaded otherwise.
-        if (SELF_TEST && server != null) me.sshcrack.tc_campfire.dev.DevSelfTest.tick(server);
+        if (SELF_TEST && server != null) DevSelfTest.tick(server);
     }
 }
