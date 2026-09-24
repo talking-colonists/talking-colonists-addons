@@ -4,7 +4,6 @@ import com.minecolonies.api.colony.ICitizenData;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.IColonyManager;
 import com.mojang.authlib.GameProfile;
-import me.sshcrack.mc_talking.api.memory.BroadcastPublishResult;
 import me.sshcrack.tc_noticeboard.Board;
 import me.sshcrack.tc_noticeboard.NoticeBoard;
 import me.sshcrack.tc_noticeboard.shared.book.BookText;
@@ -34,7 +33,7 @@ import java.util.UUID;
  * Dev-only end-to-end check, run by the {@code selfTestServer} Gradle run
  * ({@code -Dtc_noticeboard.selftest=true}); excluded from the release jar. It creates a colony with three
  * citizens around a lectern, posts a notice, rushes the replies (real Talking Colonists text generation),
- * and checks that they were pinned into the book; then it uses the loudspeaker. Logs
+ * and checks that they were pinned into the book; then it rings the town bell with a book. Logs
  * {@code TC_NOTICEBOARD_SELFTEST_SUCCESS} or {@code TC_NOTICEBOARD_SELFTEST_FAIL} and stops the server.
  */
 public final class DevSelfTest {
@@ -108,9 +107,13 @@ public final class DevSelfTest {
         for (String page : text.pages().subList(pagesBefore, text.pages().size())) {
             NoticeBoard.LOGGER.info("TC_NOTICEBOARD_SELFTEST: pinned: {}", page.replace('\n', ' '));
         }
-        BroadcastPublishResult shout = board.announce(poster, colony, "The fair starts at noon, see you all there!");
-        NoticeBoard.LOGGER.info("TC_NOTICEBOARD_SELFTEST: loudspeaker: {} ({} citizens)", shout.status(), shout.recipients());
-        require(shout.isPublished() || shout.status() == BroadcastPublishResult.Status.RATE_LIMITED, "the loudspeaker works");
+        BlockPos bell = lecternPos.offset(2, 0, 0);
+        level.setBlock(bell, Blocks.BELL.defaultBlockState(), 3);
+        ItemStack crier = WrittenBooks.create("Fair today", "notice_selftest", WrittenBooks.ORIGINAL,
+                List.of(Component.literal("The fair starts at noon, see you all there!")));
+        boolean rang = board.ringBell(poster, level, bell, crier);
+        NoticeBoard.LOGGER.info("TC_NOTICEBOARD_SELFTEST: town bell announced: {}", rang);
+        require(rang, "the town bell announces the book");
         done = true;
         NoticeBoard.LOGGER.info("TC_NOTICEBOARD_SELFTEST_SUCCESS");
         server.halt(false);

@@ -31,8 +31,8 @@ import java.util.UUID;
  * Dev-only end-to-end check, run by the {@code selfTestServer} Gradle run
  * ({@code -Dtc_postal.selftest=true}); excluded from the release jar. It creates a colony with two
  * citizens, hands one of them a letter addressed to the other (no courier: anyone may carry it),
- * rushes it, and checks that a real reply written through Talking Colonists lands in the mailbox and
- * that {@code collect} turns it into a book. Logs {@code TC_POSTAL_SELFTEST_SUCCESS} or
+ * rushes it, and checks that a real reply written through Talking Colonists is carried back to the
+ * sender as a book. Logs {@code TC_POSTAL_SELFTEST_SUCCESS} or
  * {@code TC_POSTAL_SELFTEST_FAIL} and stops the server.
  */
 public final class DevSelfTest {
@@ -42,6 +42,7 @@ public final class DevSelfTest {
 
     private static int ticks;
     private static boolean done;
+    private static boolean carrying;
     private static ServerPlayer sender;
 
     private DevSelfTest() {
@@ -71,6 +72,8 @@ public final class DevSelfTest {
         ICitizenData recipient = colony.getCitizenManager().createAndRegisterCivilianData();
         colony.getCitizenManager().spawnOrCreateCivilian(recipient, level, List.of(center.offset(-2, 1, 0)), true);
         AbstractEntityCitizen carrierEntity = carrier.getEntity().orElseThrow();
+        // The sender waits a few blocks away for the reply to be brought.
+        sender.setPos(center.getX() + 0.5, center.getY(), center.getZ() + 4.5);
 
         PostOffice office = PostalService.office();
         require(office != null, "post office running");
@@ -94,12 +97,23 @@ public final class DevSelfTest {
         PostOffice office = PostalService.office();
         if (office == null || sender == null) return;
         List<PostStore.Mail> box = office.store().mailbox(sender.getUUID());
-        if (box.isEmpty()) return;
-        PostStore.Mail mail = box.get(0);
-        require(!mail.from().equals("Post office"), "the letter was answered, not returned: " + mail.pages());
-        PostalService.LOGGER.info("TC_POSTAL_SELFTEST: reply \"{}\" from {}: {}", mail.title(), mail.from(), String.join(" ", mail.pages()));
-        require(office.collect(sender) == 1, "collect hands out the reply");
-        require(sender.getInventory().countItem(Items.WRITTEN_BOOK) == 1, "the reply is a book in the inventory");
+        if (box.isEmpty() && !carrying) return;
+        PostStore.Mail mail = box.isEmpty() ? null : box.get(0);
+        if (mail != null && !carrying) {
+            require(!mail.from().equals("Post office"), "the letter was answered, not returned: " + mail.pages());
+            PostalService.LOGGER.info("TC_POSTAL_SELFTEST: reply \"{}\" from {}: {}", mail.title(), mail.from(), String.join(" ", mail.pages()));
+        }
+        if (!carrying) {
+            require(office.bringMail(sender), "a citizen sets off with the reply");
+            carrying = true;
+            PostalService.LOGGER.info("TC_POSTAL_SELFTEST: a citizen brings the reply...");
+            return;
+        }
+        if (sender.getInventory().countItem(Items.WRITTEN_BOOK) == 0) {
+            // bringMail is what the post office's regular check calls for real players; it is a no-op while a citizen is on the way.
+            office.bringMail(sender);
+            return;
+        }
         require(office.store().mailbox(sender.getUUID()).isEmpty(), "the mailbox is empty afterwards");
         done = true;
         PostalService.LOGGER.info("TC_POSTAL_SELFTEST_SUCCESS");

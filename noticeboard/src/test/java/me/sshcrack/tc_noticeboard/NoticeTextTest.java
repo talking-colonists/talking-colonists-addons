@@ -37,4 +37,11 @@ class NoticeTextTest {
         assertEquals("Reply from Anna, baker:\n\nYes!", NoticeText.replyPage("Anna", "baker", "Yes!"));
         assertEquals("Reply from Ben:\n\nNo.", NoticeText.replyPage("Ben", "", "No."));
     }
+
+    @Test
+    void announcementIsTitleAndText() {
+        assertEquals("Fair today: Starts at noon.", NoticeText.announcement(" Fair today ", "Starts\n at noon."));
+        assertEquals("Fair today", NoticeText.announcement("Fair today", " "));
+        assertTrue(NoticeText.announcement("T", "x ".repeat(400)).length() <= NoticeText.MAX_BROADCAST_CHARS);
+    }
 }

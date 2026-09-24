@@ -13,8 +13,8 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * {@code /gazette}: take a copy of your colony's latest issue (one per issue and player).
- * {@code /gazette publish}: operators write an issue right now.
+ * Operator shortcuts (players get their copy from a citizen): {@code /gazette} hands you a copy of
+ * your colony's latest issue, {@code /gazette publish} writes an issue right now.
  */
 public final class GazetteCommand {
     private GazetteCommand() {
@@ -22,9 +22,9 @@ public final class GazetteCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("gazette")
+                .requires(source -> source.hasPermission(2))
                 .executes(context -> takeCopy(context.getSource()))
                 .then(Commands.literal("publish")
-                        .requires(source -> source.hasPermission(2))
                         .executes(context -> publish(context.getSource()))));
     }
 

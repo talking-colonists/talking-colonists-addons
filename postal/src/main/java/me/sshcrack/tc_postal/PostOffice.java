@@ -12,12 +12,10 @@ import me.sshcrack.mc_talking.api.text.TextRequest;
 import me.sshcrack.tc_postal.shared.book.BookPages;
 import me.sshcrack.tc_postal.shared.book.BookText;
 import me.sshcrack.tc_postal.shared.book.WrittenBooks;
+import me.sshcrack.tc_postal.shared.delivery.Couriers;
 import me.sshcrack.tc_postal.shared.provider.TextCapacity;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.network.chat.Style;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -29,7 +27,8 @@ import java.util.UUID;
 
 /**
  * Takes letters from players, has the recipient write back through Talking Colonists once the letter
- * arrives, and keeps the replies in the player's mailbox ({@code /mail}). Server thread only.
+ * arrives, and has the courier (or the writer) carry the reply to the player when they are in the
+ * colony. Replies wait in the player's mailbox until then. Server thread only.
  */
 public final class PostOffice {
     static final String SOURCE = PostalService.MOD_ID;
@@ -47,11 +46,17 @@ public final class PostOffice {
 
     private final MinecraftServer server;
     private final PostStore store;
+    private final Couriers couriers;
     private int ticks;
 
     PostOffice(MinecraftServer server, PostStore store) {
         this.server = server;
         this.store = store;
+        this.couriers = new Couriers(server, SOURCE + ":delivery");
+    }
+
+    Couriers couriers() {
+        return couriers;
     }
 
     public PostStore store() {
@@ -125,12 +130,51 @@ public final class PostOffice {
     }
 
     void tick() {
+        couriers.tick();
         if (++ticks % CHECK_INTERVAL_TICKS != 0) return;
         long now = now();
         for (PostStore.Letter letter : List.copyOf(store.letters())) {
             if (letter.writing || letter.dueGameTime > now) continue;
             deliver(letter, now);
         }
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            bringMail(player);
+        }
+    }
+
+    /**
+     * Sends a citizen with the player's oldest waiting letter, if the player is inside the colony it
+     * comes from. One letter at a time. Returns whether someone is on the way.
+     */
+    public boolean bringMail(ServerPlayer player) {
+        List<PostStore.Mail> box = store.mailbox(player.getUUID());
+        for (PostStore.Mail mail : List.copyOf(box)) {
+            IColony colony = colony(mail.colonyKey());
+            if (colony == null) {
+                // Its colony is gone: nobody can carry it any more.
+                box.remove(mail);
+                store.save();
+                continue;
+            }
+            if (player.level() != colony.getWorld() || !colony.isCoordInColony(player.level(), player.blockPosition())) continue;
+            String key = "mail|" + mail.id();
+            if (couriers.isRunning(key)) return true;
+            ICitizenData writer = mail.fromCitizenId() < 0 ? null : colony.getCitizenManager().getCivilian(mail.fromCitizenId());
+            AbstractEntityCitizen preferred = writer == null ? null : writer.getEntity().orElse(null);
+            boolean ownReply = preferred != null && writer.getName().equals(mail.from());
+            String hint = mail.fromCitizenId() < 0 ? "It is their own letter, which could not be delivered."
+                    : "It is " + mail.from() + "'s reply to the letter they sent" + (ownReply ? "; you wrote it yourself." : ".");
+            return couriers.dispatch(key, colony, player, preferred, "a letter from " + mail.from(), hint, () -> book(mail),
+                    delivered -> {
+                        if (delivered && box.remove(mail)) store.save();
+                    });
+        }
+        return false;
+    }
+
+    private static ItemStack book(PostStore.Mail mail) {
+        return WrittenBooks.create(mail.title(), mail.from(), WrittenBooks.ORIGINAL,
+                mail.pages().stream().map(page -> (Component) Component.literal(page)).toList());
     }
 
     private void deliver(PostStore.Letter letter, long now) {
@@ -170,10 +214,10 @@ public final class PostOffice {
             remember(recipient, letter, answer);
             List<String> pages = BookPages.paginate(answer.reply(), BookPages.PAGE_CHARS);
             store.letters().remove(letter);
-            store.mailbox(letter.playerId).add(new PostStore.Mail(recipient.getName(),
-                    LetterText.replyTitle(letter.title, recipient.getName()), pages));
+            store.mailbox(letter.playerId).add(new PostStore.Mail(UUID.randomUUID(), letter.colonyKey, recipient.getId(),
+                    recipient.getName(), LetterText.replyTitle(letter.title, recipient.getName()), pages));
             store.save();
-            notifyMail(letter.playerId, "A letter from " + recipient.getName() + " has arrived.");
+            notifyMail(letter.playerId, recipient.getName() + " wrote back. The letter will be brought to you in the colony.");
         }));
     }
 
@@ -195,18 +239,18 @@ public final class PostOffice {
         for (String part : LetterText.returnedLetter(letter.recipientName, why, letter.body)) {
             pages.addAll(BookPages.paginate(part, BookPages.PAGE_CHARS));
         }
-        store.mailbox(letter.playerId).add(new PostStore.Mail("Post office", LetterText.cut("Returned: " + letter.title, 32), pages));
+        store.mailbox(letter.playerId).add(new PostStore.Mail(UUID.randomUUID(), letter.colonyKey, -1, "Post office",
+                LetterText.cut("Returned: " + letter.title, 32), pages));
         store.save();
-        notifyMail(letter.playerId, "Your letter to " + letter.recipientName + " came back undelivered.");
+        notifyMail(letter.playerId, "Your letter to " + letter.recipientName + " could not be delivered; it will be brought back to you.");
     }
 
-    /** Hands the player all their mail as books. Returns how many letters they got. */
+    /** Operators: hands the player all their waiting letters at once. Returns how many. */
     public int collect(ServerPlayer player) {
         List<PostStore.Mail> box = store.mailbox(player.getUUID());
         int count = box.size();
         for (PostStore.Mail mail : box) {
-            ItemStack book = WrittenBooks.create(mail.title(), mail.from(), WrittenBooks.ORIGINAL,
-                    mail.pages().stream().map(page -> (Component) Component.literal(page)).toList());
+            ItemStack book = book(mail);
             if (!player.getInventory().add(book)) player.drop(book, false);
         }
         box.clear();
@@ -229,16 +273,15 @@ public final class PostOffice {
 
     void onLogin(ServerPlayer player) {
         int waiting = store.mailbox(player.getUUID()).size();
-        if (waiting > 0) notifyMail(player.getUUID(), "You have " + waiting + (waiting == 1 ? " letter" : " letters") + " in your mailbox.");
+        if (waiting > 0) {
+            notifyMail(player.getUUID(), waiting + (waiting == 1 ? " letter waits" : " letters wait")
+                    + " for you; it will be brought to you in the colony.");
+        }
     }
 
     private void notifyMail(UUID playerId, String text) {
         ServerPlayer player = server.getPlayerList().getPlayer(playerId);
-        if (player == null) return;
-        player.sendSystemMessage(prefix().append(Component.literal(text + " ").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal("[Collect]").withStyle(Style.EMPTY.withColor(ChatFormatting.AQUA)
-                        .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/mail"))
-                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("/mail"))))));
+        if (player != null) tell(player, text);
     }
 
     static void tell(ServerPlayer player, String text) {

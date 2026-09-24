@@ -71,7 +71,7 @@ mod.id = "tc_noticeboard"
 mod.name = "Talking Colonists: Notice Board"
 mod.group = "me.sshcrack.tc_noticeboard"
 mod.version = "0.1.0"
-mod.description = "Post notices on a lectern for your citizens to read, spread and answer, and address the colony by loudspeaker"
+mod.description = "Post notices on a lectern for your citizens to read, spread and answer, and ring the town bell to tell everyone"
 
 [playtest]
 mod.id = "tc_playtest"

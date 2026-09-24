@@ -13,13 +13,14 @@ import me.sshcrack.mc_talking.api.colony.ColonyEventService;
 import me.sshcrack.mc_talking.api.colony.ColonyEventView;
 import me.sshcrack.mc_talking.api.text.CitizenTextService;
 import me.sshcrack.mc_talking.api.text.TextRequest;
+import me.sshcrack.tc_gazette.shared.book.WrittenBooks;
+import me.sshcrack.tc_gazette.shared.delivery.Couriers;
 import me.sshcrack.tc_gazette.shared.provider.TextCapacity;
 import me.sshcrack.mc_talking.api.text.TextResult;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
@@ -36,8 +37,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 /**
- * Decides when each colony's gazette is written, asks Talking Colonists to write it, and hands out
- * copies. Everything here runs on the server thread.
+ * Decides when each colony's gazette is written, asks Talking Colonists to write it, and has a
+ * citizen bring a copy to every colony member in the colony. Everything here runs on the server thread.
  *
  * <p>A colony gets a new issue on the first check after {@link #PUBLISH_TIME_OF_DAY} of a new
  * in-game day, if anything happened since the last issue and the provider has a free background
@@ -60,6 +61,7 @@ public final class GazettePublisher {
     private final GazetteStore store;
     private final Set<String> inFlight = new HashSet<>();
     private final Map<String, Retry> retries = new HashMap<>();
+    private final Couriers couriers;
     private int ticks;
 
     private record Retry(long day, int attempts, long notBeforeGameTime) {
@@ -71,6 +73,11 @@ public final class GazettePublisher {
     public GazettePublisher(MinecraftServer server, GazetteStore store) {
         this.server = server;
         this.store = store;
+        this.couriers = new Couriers(server, NS + ":delivery");
+    }
+
+    public Couriers couriers() {
+        return couriers;
     }
 
     public GazetteStore store() {
@@ -78,10 +85,12 @@ public final class GazettePublisher {
     }
 
     public void tick() {
+        couriers.tick();
         if (++ticks % CHECK_INTERVAL_TICKS != 0) return;
         for (IColony colony : IColonyManager.getInstance().getAllColonies()) {
             try {
                 checkColony(colony);
+                deliverCopies(colony);
             } catch (RuntimeException e) {
                 ColonyGazette.LOGGER.error("Gazette check failed for colony {}", colony.getID(), e);
             }
@@ -204,6 +213,37 @@ public final class GazettePublisher {
         return true;
     }
 
+    /** Sends a copy of the latest issue to each online member inside the colony who has none yet. */
+    private void deliverCopies(IColony colony) {
+        GazetteStore.ColonyState state = store.get(key(colony));
+        if (state == null || state.latest == null) return;
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (state.claimed.contains(player.getUUID()) || player.level() != colony.getWorld()
+                    || !colony.getPermissions().isColonyMember(player)
+                    || !colony.isCoordInColony(player.level(), player.blockPosition())) continue;
+            deliverTo(colony, player);
+        }
+    }
+
+    /**
+     * Has a citizen bring {@code player} a copy of the latest issue, unless they already got one.
+     * Returns whether a citizen is on the way.
+     */
+    public boolean deliverTo(IColony colony, ServerPlayer player) {
+        GazetteStore.ColonyState state = store.get(key(colony));
+        if (state == null || state.latest == null || state.claimed.contains(player.getUUID())) return false;
+        GazetteIssue issue = state.latest;
+        return couriers.dispatch(key(colony) + "|" + player.getUUID() + "|" + issue.number(), colony, player, null,
+                "the new " + issue.colonyName() + " Gazette",
+                "Today's headline is \"" + issue.headline() + "\".",
+                () -> GazetteBook.create(issue, WrittenBooks.COPY),
+                delivered -> {
+                    if (!delivered || state.latest != issue) return;
+                    state.claimed.add(player.getUUID());
+                    store.save();
+                });
+    }
+
     /** News since {@code sinceGameTime}, oldest first, without this addon's own events. */
     public static List<String> newsSince(IColony colony, long sinceGameTime, long now) {
         long since = Math.max(sinceGameTime, now - MAX_COVERAGE_TICKS);
@@ -242,15 +282,11 @@ public final class GazettePublisher {
             ColonyEventService.record(colony, new AddonColonyEvent(NS, "issue_published",
                     "The " + issue.colonyName() + " Gazette No. " + issue.number() + " came out: \"" + issue.headline() + "\""));
         }
-        Component link = Component.literal("[Get a copy]").withStyle(style -> style
-                .withColor(ChatFormatting.GREEN)
-                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/gazette"))
-                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("/gazette"))));
         Component message = Component.literal("The " + issue.colonyName() + " Gazette No. " + issue.number() + ": ")
                 .withStyle(ChatFormatting.GOLD)
                 .append(Component.literal(issue.headline()).withStyle(ChatFormatting.WHITE))
-                .append(" ")
-                .append(link);
+                .append(Component.literal(" A citizen will bring you a copy when you are in the colony.")
+                        .withStyle(ChatFormatting.GRAY));
         for (Player player : colony.getMessagePlayerEntities()) {
             player.sendSystemMessage(message);
         }

@@ -1,5 +1,6 @@
 package me.sshcrack.tc_gazette.dev;
 
+import com.minecolonies.api.colony.ICitizenData;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.IColonyManager;
 import com.mojang.authlib.GameProfile;
@@ -31,7 +32,7 @@ import java.util.UUID;
 /**
  * Dev-only end-to-end check, run by the {@code selfTestServer} Gradle run
  * ({@code -Dtc_gazette.selftest=true}); excluded from the release jar. It creates a colony, records
- * events, writes one real issue through Talking Colonists, hands out a copy with {@code /gazette},
+ * events, writes one real issue through Talking Colonists, has a citizen walk a copy to the owner,
  * logs {@code TC_GAZETTE_SELFTEST_SUCCESS} or {@code TC_GAZETTE_SELFTEST_FAIL}, and stops the server.
  * Without a Gemini API key in the Talking Colonists config the issue cannot be written and the test fails.
  */
@@ -42,6 +43,7 @@ public final class DevSelfTest {
 
     private static int ticks;
     private static boolean done;
+    private static boolean delivering;
     private static IColony colony;
     private static ServerPlayer owner;
 
@@ -53,7 +55,8 @@ public final class DevSelfTest {
         ticks++;
         try {
             if (ticks == START_TICK) start(server);
-            else if (ticks > TIMEOUT_TICKS) fail(server, "timed out waiting for the issue");
+            else if (delivering && ticks % 10 == 0) checkDelivered(server);
+            if (ticks > TIMEOUT_TICKS) fail(server, "timed out waiting for the issue");
         } catch (RuntimeException | Error e) {
             ColonyGazette.LOGGER.error("Self-test crashed", e);
             fail(server, e.toString());
@@ -67,6 +70,10 @@ public final class DevSelfTest {
         owner = FakePlayerFactory.get(level, OWNER);
         colony = IColonyManager.getInstance().createColony(level, center, owner, "Selftest Hollow", "Colonial");
         require(colony != null, "MineColonies created the colony");
+        // A citizen to carry the copy, and the owner standing a few blocks away.
+        ICitizenData carrier = colony.getCitizenManager().createAndRegisterCivilianData();
+        colony.getCitizenManager().spawnOrCreateCivilian(carrier, level, List.of(center.offset(-4, 1, 0)), true);
+        owner.setPos(center.getX() + 4.5, center.getY(), center.getZ() + 0.5);
 
         require(ColonyEventService.record(colony, new AddonColonyEvent("tc_gazette_selftest", "raid",
                 "Three raiders attacked the east wall at night; the guards drove them off and nobody was hurt")), "event recorded");
@@ -99,23 +106,33 @@ public final class DevSelfTest {
             ItemStack book = GazetteBook.create(issue, WrittenBooks.ORIGINAL);
             require(book.is(Items.WRITTEN_BOOK), "book item");
 
-            var dispatcher = server.getCommands().getDispatcher();
-            int first = dispatcher.execute("gazette", owner.createCommandSourceStack());
-            require(first == 1 && owner.getInventory().countItem(Items.WRITTEN_BOOK) == 1, "/gazette hands out a copy");
-            int second = dispatcher.execute("gazette", owner.createCommandSourceStack());
-            require(second == 0 && owner.getInventory().countItem(Items.WRITTEN_BOOK) == 1, "only one copy per player");
-
+            require(ColonyGazette.publisher().deliverTo(colony, owner), "a citizen sets off with a copy");
+            require(!ColonyGazette.publisher().deliverTo(colony, owner), "only one citizen goes per copy");
+            delivering = true;
+            ColonyGazette.LOGGER.info("TC_GAZETTE_SELFTEST: a citizen brings the copy...");
             ColonyGazette.LOGGER.info("TC_GAZETTE_SELFTEST: headline: {}", issue.headline());
             for (GazetteIssue.Article article : issue.articles()) {
                 ColonyGazette.LOGGER.info("TC_GAZETTE_SELFTEST: article: {} | {}", article.title(), article.body());
             }
-            done = true;
-            ColonyGazette.LOGGER.info("TC_GAZETTE_SELFTEST_SUCCESS");
-            server.halt(false);
         } catch (Exception | Error e) {
             ColonyGazette.LOGGER.error("Self-test failed", e);
             fail(server, e.toString());
         }
+    }
+
+    /** Waits until the carried copy is in the owner's inventory. */
+    private static void checkDelivered(MinecraftServer server) {
+        if (owner.getInventory().countItem(Items.WRITTEN_BOOK) == 0) {
+            // A carrier that gave up is replaced, as the publisher's regular check does for real players.
+            if (ColonyGazette.publisher().deliverTo(colony, owner)) ColonyGazette.LOGGER.info("TC_GAZETTE_SELFTEST: another citizen sets off");
+            return;
+        }
+        GazetteStore.ColonyState state = ColonyGazette.publisher().store().get(GazettePublisher.key(colony));
+        require(state.claimed.contains(owner.getUUID()), "the copy counts as received");
+        require(!ColonyGazette.publisher().deliverTo(colony, owner), "no second copy for the same issue");
+        done = true;
+        ColonyGazette.LOGGER.info("TC_GAZETTE_SELFTEST_SUCCESS");
+        server.halt(false);
     }
 
     private static void fail(MinecraftServer server, String reason) {

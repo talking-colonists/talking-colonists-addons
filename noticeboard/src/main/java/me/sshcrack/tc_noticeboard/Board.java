@@ -39,7 +39,8 @@ import java.util.UUID;
 /**
  * Notices: a signed book on a lectern inside a colony. Posting tells the citizens near the board, who
  * spread it; a few minutes later up to {@link #MAX_REPLIES} of them write short replies, which are
- * pinned into the book as extra pages. Also the loudspeaker. Server thread only.
+ * pinned into the book as extra pages. Also the town bell: ringing it with a signed book tells the
+ * whole colony at once. Server thread only.
  */
 public final class Board {
     static final int MAX_REPLIES = 3;
@@ -132,10 +133,29 @@ public final class Board {
         return true;
     }
 
-    /** {@code /loudspeaker}: every citizen of the colony hears the message now. */
+    /** Every citizen of the colony hears the message now, attributed to the player. */
     public BroadcastPublishResult announce(ServerPlayer player, IColony colony, String message) {
         return CitizenMemoryService.publishBroadcast(colony,
                 BroadcastRequest.immediate(BroadcastSource.player(player.getUUID(), player.getGameProfile().getName()), message));
+    }
+
+    /**
+     * The player rings a bell inside their colony while holding a signed book: every citizen hears
+     * the book at once (the bell itself rings as usual). Returns whether it was announced.
+     */
+    public boolean ringBell(ServerPlayer player, ServerLevel level, BlockPos bell, ItemStack book) {
+        BookText text = BookText.read(book);
+        IColony colony = IColonyManager.getInstance().getIColony(level, bell);
+        if (text == null || colony == null || !colony.getPermissions().isColonyMember(player)) return false;
+        BroadcastPublishResult result = announce(player, colony, NoticeText.announcement(text.title(), text.body()));
+        tell(player, switch (result.status()) {
+            case PUBLISHED -> "The bell rings out \"" + text.title() + "\": " + result.recipients()
+                    + " citizens of " + colony.getName() + " heard it.";
+            case RATE_LIMITED -> "The colony has had a lot of news lately; ring again in a while.";
+            case DISABLED -> "Broadcasts are turned off on this server.";
+            default -> "Nobody was there to hear the bell.";
+        });
+        return result.isPublished();
     }
 
     /** Operators: all notices collect their replies on the next check. */

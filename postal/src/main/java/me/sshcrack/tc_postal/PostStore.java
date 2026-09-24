@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Letters on their way and each player's mailbox, saved as JSON in the world folder. Server thread only. */
+/** Letters on their way to citizens, and replies waiting to be carried to players, saved as JSON in the world folder. Server thread only. */
 public final class PostStore {
     /** A letter from a player on its way to a citizen. */
     public static final class Letter {
@@ -33,8 +33,11 @@ public final class PostStore {
         public transient boolean writing;
     }
 
-    /** A letter waiting in a player's mailbox. */
-    public record Mail(String from, String title, List<String> pages) {
+    /**
+     * A letter for a player, waiting until a citizen of {@code colonyKey} can carry it to them.
+     * {@code fromCitizenId} is the writer (who carries it without a courier), or -1.
+     */
+    public record Mail(UUID id, String colonyKey, int fromCitizenId, String from, String title, List<String> pages) {
     }
 
     private final Path file;
@@ -75,7 +78,10 @@ public final class PostStore {
                         JsonObject json = element.getAsJsonObject();
                         List<String> pages = new ArrayList<>();
                         json.getAsJsonArray("pages").forEach(page -> pages.add(page.getAsString()));
-                        box.add(new Mail(json.get("from").getAsString(), json.get("title").getAsString(), List.copyOf(pages)));
+                        box.add(new Mail(json.has("id") ? UUID.fromString(json.get("id").getAsString()) : UUID.randomUUID(),
+                                json.has("colonyKey") ? json.get("colonyKey").getAsString() : "",
+                                json.has("fromCitizenId") ? json.get("fromCitizenId").getAsInt() : -1,
+                                json.get("from").getAsString(), json.get("title").getAsString(), List.copyOf(pages)));
                     }
                 }
             }
@@ -95,6 +101,9 @@ public final class PostStore {
             JsonArray mails = new JsonArray();
             for (Mail mail : box) {
                 JsonObject json = new JsonObject();
+                json.addProperty("id", mail.id().toString());
+                json.addProperty("colonyKey", mail.colonyKey());
+                json.addProperty("fromCitizenId", mail.fromCitizenId());
                 json.addProperty("from", mail.from());
                 json.addProperty("title", mail.title());
                 JsonArray pages = new JsonArray();

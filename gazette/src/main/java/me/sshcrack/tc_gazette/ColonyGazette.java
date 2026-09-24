@@ -90,7 +90,10 @@ public class ColonyGazette {
     }
 
     private static void stop() {
-        if (publisher != null) publisher.store().save();
+        if (publisher != null) {
+            publisher.couriers().stopAll();
+            publisher.store().save();
+        }
         publisher = null;
         server = null;
     }

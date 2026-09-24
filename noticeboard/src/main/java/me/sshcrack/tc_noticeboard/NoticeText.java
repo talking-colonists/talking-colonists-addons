@@ -20,6 +20,12 @@ public final class NoticeText {
         return cut(head + ": " + text, MAX_BROADCAST_CHARS);
     }
 
+    /** What the town bell announces: the book's title and text, at most 500 characters. */
+    public static String announcement(String title, String body) {
+        String text = body.strip().replaceAll("\\s+", " ");
+        return cut(text.isEmpty() ? title.strip() : title.strip() + ": " + text, MAX_BROADCAST_CHARS);
+    }
+
     /** What a citizen is asked when writing a reply to pin under the notice. */
     public static String replyDirective(String poster, String title, String body) {
         return poster + " pinned a notice titled \"" + title.strip() + "\" to the colony notice board. It says:\n<<<\n"

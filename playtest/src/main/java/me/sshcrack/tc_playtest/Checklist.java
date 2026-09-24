@@ -34,26 +34,23 @@ final class Checklist {
                     new Button("Dusk", "/time set 12000", "Set the time to 12000"),
                     new Button("Sample news", "/playtest news", "Record a raid, a harvest and a newcomer as colony events"))),
             new Section("tc_gazette", "Colony Gazette",
-                    "Every morning the teacher writes about yesterday. Add news, publish, then read your copy.", List.of(
-                    new Button("Publish now", "/gazette publish", "Write an issue right away (uses one Gemini request)"),
-                    new Button("Get a copy", "/gazette", "Hand me the latest issue"))),
+                    "Every morning the teacher writes about yesterday; a citizen walks over and hands you a copy.", List.of(
+                    new Button("Publish now", "/gazette publish", "Write an issue right away (uses one Gemini request)"))),
             new Section("tc_campfire", "Campfire Nights",
                     "At dusk, idle citizens tell stories at the campfire. Stand close and chat to join in.", List.of(
                     new Button("Start now", "/campfire start", "Gather idle citizens at the nearest campfire (uses Gemini Live)"),
                     new Button("Stop", "/campfire stop", "End the campfire night"))),
             new Section("tc_postal", "Postal Service",
-                    "Sign a book with a citizen's name as its title and right-click the courier (or the citizen) with it.", List.of(
+                    "Sign a book with a citizen's name as its title and right-click a citizen with it; the reply is brought to you.", List.of(
                     new Button("Get a test letter", "/playtest letter", "A signed letter to a random citizen of the colony"),
-                    new Button("Deliver now", "/mail rush", "Your letters arrive within seconds"),
-                    new Button("Collect mail", "/mail", "Take the replies from your mailbox"))),
+                    new Button("Deliver now", "/mail rush", "Your letters reach their recipients within seconds"))),
             new Section("tc_tavern", "Tavern Recruiter",
                     "Talk to a tavern visitor and ask them to join for less; a good case lowers their price.", List.of(
                     new Button("Go to a visitor", "/playtest visitor", "Teleport next to a tavern visitor"))),
             new Section("tc_noticeboard", "Notice Board",
-                    "Put a signed book on a lectern in the colony; citizens spread it and pin replies into it.", List.of(
-                    new Button("Get a notice", "/playtest notice", "A lectern and a signed notice to put on it"),
-                    new Button("Replies now", "/noticeboard rush", "Citizens write their replies within seconds"),
-                    new Button("Loudspeaker", "/loudspeaker ", "Type a message every citizen hears"))));
+                    "A signed book on a lectern becomes a notice with pinned replies; ring a bell holding a book to tell everyone.", List.of(
+                    new Button("Get a notice", "/playtest notice", "A lectern, a bell and signed notices"),
+                    new Button("Replies now", "/noticeboard rush", "Citizens write their replies within seconds"))));
 
     private Checklist() {
     }

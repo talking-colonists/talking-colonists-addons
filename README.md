@@ -10,7 +10,7 @@ they only share this repository and its build.
 | Campfire Nights | [`campfire/`](campfire) | At dusk, citizens gather around a campfire and tell each other stories. |
 | Postal Service | [`postal/`](postal) | Write letters to your citizens and get in-character replies in your mailbox. |
 | Tavern Recruiter | [`tavern/`](tavern) | Talk to tavern visitors and talk them into joining for less. |
-| Notice Board | [`noticeboard/`](noticeboard) | Post notices on a lectern for citizens to spread and answer; address the colony by loudspeaker. |
+| Notice Board | [`noticeboard/`](noticeboard) | Post notices on a lectern for citizens to spread and answer; ring the town bell to tell everyone. |
 
 Every addon builds for **1.21.1 NeoForge** and **1.20.1 Forge** from one source tree, using
 [Stonecutter](https://stonecutter.kikugie.dev/), and needs Talking Colonists 2.1 or newer.
@@ -21,11 +21,11 @@ Every morning (in-game time 1000) the colony's teacher writes a newspaper about 
 raids, births and deaths, new hires and job changes, buildings built or upgraded, and anything other
 addons record as colony events. Without a teacher, a student in the library writes it, and without
 one of those, "the colony's notes" do.
-Colony members get a chat message when a new issue is out.
+Colony members get a chat message when a new issue is out, and while you are in the colony a citizen
+(the courier if there is one) walks up to you and hands you a copy, saying a line about it. One copy
+per player and issue; if you are away, it is brought when you come back.
 
-- `/gazette` gives you a copy of the latest issue of the colony you stand in (or own). One copy per
-  player and issue.
-- `/gazette publish` (operators) writes an issue right away.
+- Operators: `/gazette publish` writes an issue right away, `/gazette` hands you a copy.
 
 Quiet days with no events get no issue. Issues use a background Gemini request and are skipped while
 the key's quota is used up or all background slots are busy; the gazette retries a few times per day.
@@ -46,10 +46,10 @@ news, so the Gazette may report it.
 Write a letter in a book and quill and sign it with the recipient's name as the title ("Anna",
 "Dear Anna Smith" and "To: Anna" all work). Right-click the colony's courier with it, or the
 recipient in person; without a courier any citizen passes it on. A few minutes later the recipient
-writes back in character, and the reply waits in your mailbox:
+writes back in character, and the courier (or the writer) walks up to you and hands you the reply the
+next time you are in the colony.
 
-- `/mail` takes your letters (you get a chat message with a [Collect] link when one arrives).
-- `/mail rush` (operators) makes your letters arrive right away.
+- Operators: `/mail rush` makes your letters reach their recipients now, `/mail` hands you all waiting replies.
 
 The citizen remembers the exchange (a confirmed Talking Colonists memory), so they can bring it up
 when you talk. The recipient has to be loaded to write back; letters wait for them, and come back
@@ -71,8 +71,10 @@ they bring it up when you talk to them. A few minutes later up to three citizens
 short replies, worries or petitions, which are pinned into the book as extra pages; read them on the
 lectern. Taking the book down cancels the replies.
 
-- `/loudspeaker <message>` tells every citizen of your colony at once.
-- `/noticeboard rush` (operators) makes waiting notices collect their replies now.
+Ring a bell inside your colony while holding a signed book and every citizen hears it at once, like
+a town crier (the bell rings as usual).
+
+- Operators: `/noticeboard rush` makes waiting notices collect their replies now.
 
 ## Layout
 
@@ -120,6 +122,10 @@ The first launch creates the creative superflat world `TC_Playtest`, later launc
 When you join, the dev-only `playtest/` mod builds the colony "Playtest Hollow" next to you: town
 hall, school with a teacher, library with a student, tavern with a visitor, two houses, six citizens
 and a campfire. Chat shows a clickable checklist for every addon (`/playtest` shows it again).
+
+Handing things over: whenever an addon gives you something (a newspaper, a reply letter), a citizen
+walks up to you and hands it over, saying a short line through Talking Colonists. When it cannot speak
+right now (quota, busy voices, no key), you get a chat line instead. The code is `shared/delivery`.
 
 The Gemini key comes from the main repository's dev config (`../talking-colonists`), or from
 `TC_ADDONS_KEY_FILE`. It is never printed.

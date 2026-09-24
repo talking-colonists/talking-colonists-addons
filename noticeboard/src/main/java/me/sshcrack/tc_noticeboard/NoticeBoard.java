@@ -7,6 +7,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.BellBlock;
 import net.minecraft.world.level.block.LecternBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.LevelResource;
@@ -35,7 +36,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Mod entry point: lecterns as notice boards, and the loudspeaker command. */
+/** Mod entry point: lecterns as notice boards, and bells as the colony's town crier. */
 @Mod(NoticeBoard.MOD_ID)
 public class NoticeBoard {
     public static final String MOD_ID = /*$ mod_id*/ "tc_noticeboard";
@@ -82,11 +83,18 @@ public class NoticeBoard {
         bus.addListener((RegisterCommandsEvent event) -> NoticeCommands.register(event.getDispatcher()));
     }
 
-    /** A signed book going onto an empty lectern: once vanilla placed it (next tick), post it. */
+    /**
+     * A signed book going onto an empty lectern: once vanilla placed it (next tick), post it.
+     * A bell rung with a signed book in hand: the whole colony hears the book.
+     */
     private static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || !(player.level() instanceof ServerLevel level)) return;
         if (!event.getItemStack().is(Items.WRITTEN_BOOK)) return;
         BlockState state = level.getBlockState(event.getPos());
+        if (state.getBlock() instanceof BellBlock) {
+            if (board != null) board.ringBell(player, level, event.getPos(), event.getItemStack());
+            return;
+        }
         if (!(state.getBlock() instanceof LecternBlock) || state.getValue(LecternBlock.HAS_BOOK)) return;
         PENDING.add(new PendingPost(player, level, event.getPos().immutable()));
     }

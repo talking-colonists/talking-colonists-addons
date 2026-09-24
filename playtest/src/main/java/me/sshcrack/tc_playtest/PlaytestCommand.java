@@ -96,16 +96,19 @@ final class PlaytestCommand {
         return 0;
     }
 
-    /** A lectern and a signed notice to put on it. */
+    /** A lectern with a notice to put on it, and a bell with an announcement to ring. */
     private static int notice(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         ItemStack notice = WrittenBooks.create("Harvest fair", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
                 List.of(Component.literal("Next Sunday we hold a harvest fair at the town hall. Bring your best pumpkins; "
                         + "the finest wins a golden hoe. Who wants to help build the stalls?")));
-        for (ItemStack stack : List.of(new ItemStack(net.minecraft.world.item.Items.LECTERN), notice)) {
+        ItemStack crier = WrittenBooks.create("Fair today", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
+                List.of(Component.literal("The harvest fair starts at noon at the town hall. Everyone is welcome!")));
+        for (ItemStack stack : List.of(new ItemStack(net.minecraft.world.item.Items.LECTERN), notice,
+                new ItemStack(net.minecraft.world.item.Items.BELL), crier)) {
             if (!player.getInventory().add(stack)) player.drop(stack, false);
         }
-        context.getSource().sendSuccess(() -> Component.literal("[Playtest] Place the lectern in the colony, then put the notice on it."), false);
+        context.getSource().sendSuccess(() -> Component.literal("[Playtest] Place the lectern in the colony and put \"Harvest fair\" on it. Place the bell and ring it holding \"Fair today\"."), false);
         return 1;
     }
 

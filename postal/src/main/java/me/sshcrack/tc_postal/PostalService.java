@@ -63,7 +63,10 @@ public class PostalService {
         /*?}*/
         bus.addListener((ServerStartedEvent event) -> start(event.getServer()));
         bus.addListener((ServerStoppingEvent event) -> {
-            if (office != null) office.store().save();
+            if (office != null) {
+                office.couriers().stopAll();
+                office.store().save();
+            }
             office = null;
             server = null;
         });

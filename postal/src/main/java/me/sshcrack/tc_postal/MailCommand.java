@@ -7,16 +7,19 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
-/** {@code /mail}: collect your letters. {@code /mail rush} (operators): your letters arrive now. */
+/**
+ * Operator shortcuts (players get their letters from a citizen): {@code /mail} hands you all your
+ * waiting letters, {@code /mail rush} makes your letters reach their recipients now.
+ */
 final class MailCommand {
     private MailCommand() {
     }
 
     static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("mail")
+                .requires(source -> source.hasPermission(2))
                 .executes(context -> collect(context.getSource()))
                 .then(Commands.literal("rush")
-                        .requires(source -> source.hasPermission(2))
                         .executes(context -> rush(context.getSource()))));
     }
 
