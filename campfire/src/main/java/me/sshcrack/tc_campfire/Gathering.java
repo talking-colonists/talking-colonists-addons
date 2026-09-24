@@ -37,7 +37,8 @@ public final class Gathering {
 
     static final int GATHER_TIMEOUT_TICKS = 20 * 45;
     static final int TELLING_TIMEOUT_TICKS = 20 * 60 * 8;
-    static final int PAUSED_GIVE_UP_TICKS = 20 * 90;
+    /** Long enough to outlast a neighbouring conversation, which holds the floor until it ends. */
+    static final int PAUSED_GIVE_UP_TICKS = 20 * 180;
     private static final double SEATED_DISTANCE_SQ = 1.5 * 1.5;
     private static final double DRIFT_DISTANCE_SQ = 3.5 * 3.5;
     private static final double WALK_SPEED = 0.6;

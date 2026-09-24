@@ -228,8 +228,9 @@ public final class Couriers {
         try {
             CitizenConversationService.requestAmbientLine(job.carrier, directive).whenComplete((result, error) ->
                     server.execute(() -> {
+                        // Only a line someone heard counts; otherwise the player gets the chat line.
                         boolean spoke = error == null && result != null
-                                && (result.completed() || !result.transcript().isBlank());
+                                && result.completed() && !result.transcript().isBlank();
                         if (!spoke) player.sendSystemMessage(chat);
                     }));
         } catch (RuntimeException e) {
