@@ -44,6 +44,13 @@ public final class TownHallBlocks {
     public static final Supplier<BlockEntityType<SuggestionBoxBlockEntity>> SUGGESTION_BOX_ENTITY = BLOCK_ENTITIES.register("suggestion_box",
             () -> BlockEntityType.Builder.of(SuggestionBoxBlockEntity::new, SUGGESTION_BOX.get()).build(null));
 
+    public static final Supplier<BallotBoxBlock> BALLOT_BOX = BLOCKS.register("ballot_box",
+            () -> new BallotBoxBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD).noOcclusion()));
+    public static final Supplier<Item> BALLOT_BOX_ITEM = ITEMS.register("ballot_box",
+            () -> new BlockItem(BALLOT_BOX.get(), new Item.Properties()));
+    public static final Supplier<BlockEntityType<BallotBoxBlockEntity>> BALLOT_BOX_ENTITY = BLOCK_ENTITIES.register("ballot_box",
+            () -> BlockEntityType.Builder.of(BallotBoxBlockEntity::new, BALLOT_BOX.get()).build(null));
+
     private TownHallBlocks() {
     }
 
@@ -52,7 +59,9 @@ public final class TownHallBlocks {
         ITEMS.register(modBus);
         BLOCK_ENTITIES.register(modBus);
         modBus.addListener((BuildCreativeModeTabContentsEvent event) -> {
-            if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) event.accept(SUGGESTION_BOX_ITEM.get());
+            if (event.getTabKey() != CreativeModeTabs.FUNCTIONAL_BLOCKS) return;
+            event.accept(SUGGESTION_BOX_ITEM.get());
+            event.accept(BALLOT_BOX_ITEM.get());
         });
     }
 }

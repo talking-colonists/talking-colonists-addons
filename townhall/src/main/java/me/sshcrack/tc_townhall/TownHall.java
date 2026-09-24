@@ -17,6 +17,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.LevelResource;
 /*? if forge {*/
 /*import net.minecraftforge.common.MinecraftForge;
@@ -46,6 +47,9 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import com.google.gson.Gson;
+import me.sshcrack.tc_townhall.block.BallotBoxBlock;
+import me.sshcrack.tc_townhall.block.BallotBoxBlockEntity;
 import me.sshcrack.tc_townhall.block.SuggestionBoxBlockEntity;
 import me.sshcrack.tc_townhall.block.TownHallBlocks;
 import me.sshcrack.tc_townhall.dev.DevSelfTest;
@@ -64,6 +68,9 @@ public class TownHall {
     private static @Nullable Elections elections;
     private static @Nullable SuggestionBox suggestions;
     private static @Nullable MinecraftServer server;
+    private static final Gson GSON = new Gson();
+    private static final int PHASE_CHECK_TICKS = 100;
+    private static int ticks;
 
     /*? if neoforge {*/
     public TownHall(IEventBus modBus, ModContainer container) {
@@ -81,8 +88,14 @@ public class TownHall {
         /*BlockActions.init(MOD_ID);
         *//*?}*/
         BlockActions.on(SuggestionBoxBlockEntity.TAKE, TownHall::takeNote);
-        BlockActions.on(SuggestionBoxBlockEntity.DISCARD, (player, pos, index) -> {
+        BlockActions.on(SuggestionBoxBlockEntity.DISCARD, (player, pos, index, text) -> {
             if (player.level().getBlockEntity(pos) instanceof SuggestionBoxBlockEntity box) box.remove(index);
+        });
+        BlockActions.on(BallotBoxBlockEntity.VIEW, (player, pos, argument, text) -> sendBallot(player, pos));
+        BlockActions.on(BallotBoxBlockEntity.STAND, TownHall::standAtBallotBox);
+        BlockActions.on(BallotBoxBlockEntity.SPEAK, (player, pos, argument, text) -> {
+            IColony colony = colonyAt(player, pos);
+            if (colony != null && elections != null) elections.speakAgain(player, colony, pos);
         });
         if (!TalkingColonistsApi.isAvailable() || !TalkingColonistsApi.supports(ApiFeature.BROADCAST_PUBLISHING)
                 || !TalkingColonistsApi.supports(ApiFeature.TEXT_GENERATION)) {
@@ -169,13 +182,51 @@ public class TownHall {
     }
 
     /** A player takes a note out of the suggestion box, as a one-page book. */
-    private static void takeNote(ServerPlayer player, BlockPos pos, int index) {
+    private static void takeNote(ServerPlayer player, BlockPos pos, int index, String text) {
         BlockEntity entity = player.level().getBlockEntity(pos);
         if (!(entity instanceof SuggestionBoxBlockEntity box)) return;
         SuggestionBoxBlockEntity.Note note = box.remove(index);
         if (note == null) return;
         ItemStack book = SuggestionBox.note(note.writer(), note.text());
         if (!player.getInventory().add(book)) player.drop(book, false);
+    }
+
+    private static @Nullable IColony colonyAt(ServerPlayer player, BlockPos pos) {
+        return IColonyManager.getInstance().getIColony(player.level(), pos);
+    }
+
+    /** Sends the ballot box window the colony's election; an empty colony name means "not in a colony". */
+    private static void sendBallot(ServerPlayer player, BlockPos pos) {
+        IColony colony = colonyAt(player, pos);
+        BallotView view = colony != null && elections != null ? elections.view(colony, player) : new BallotView();
+        BlockActions.view(player, pos, BallotBoxBlockEntity.VIEW_KIND, GSON.toJson(view));
+    }
+
+    /** "Stand" in the ballot box window: the text is the slogan, a line break, then the platform. */
+    private static void standAtBallotBox(ServerPlayer player, BlockPos pos, int argument, String text) {
+        IColony colony = colonyAt(player, pos);
+        if (colony == null || elections == null) {
+            Elections.tell(player, "Place the ballot box inside your colony.");
+            return;
+        }
+        int split = text.indexOf('\n');
+        String slogan = split < 0 ? text : text.substring(0, split);
+        String platform = split < 0 ? "" : text.substring(split + 1);
+        elections.stand(player, colony, slogan, platform, pos);
+    }
+
+    /** Shows each loaded ballot box its colony's election phase: a poster while campaigning, a flag while voting. */
+    private static void showPhases() {
+        for (BallotBoxBlockEntity box : BallotBoxBlockEntity.loaded()) {
+            if (box.getLevel() == null) continue;
+            IColony colony = IColonyManager.getInstance().getIColony(box.getLevel(), box.getBlockPos());
+            BallotView.Phase phase = colony != null && elections != null ? elections.phase(colony) : BallotView.Phase.IDLE;
+            BlockState state = box.getBlockState();
+            BallotBoxBlock.Phase shown = BallotBoxBlock.Phase.of(phase);
+            if (state.hasProperty(BallotBoxBlock.PHASE) && state.getValue(BallotBoxBlock.PHASE) != shown) {
+                box.getLevel().setBlockAndUpdate(box.getBlockPos(), state.setValue(BallotBoxBlock.PHASE, shown));
+            }
+        }
     }
 
     /** The running elections, or null while no server runs. */
@@ -190,6 +241,7 @@ public class TownHall {
 
     private static void tick() {
         if (elections != null) elections.tick();
+        if (++ticks % PHASE_CHECK_TICKS == 0) showPhases();
         if (suggestions != null) suggestions.tick();
         // Only referenced when enabled, so the class (left out of the release jar) is never loaded otherwise.
         if (SELF_TEST && server != null) DevSelfTest.tick(server);

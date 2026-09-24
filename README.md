@@ -81,10 +81,14 @@ a town crier (the bell rings as usual).
 
 ## Town Hall
 
-Right-click your colony's Town Hall block while holding a signed book: you stand for mayor, with the
-book's title as your slogan and its text as your platform. With Simple Voice Chat you then have 30
-seconds to give a speech. Citizens at the town hall hear it and pass it on, so every citizen votes on
-what actually reached them, and on how they feel about you after your conversations.
+Craft a Ballot Box (spruce planks around paper and an iron ingot), place it in your colony and
+right-click it. Its window shows the candidates with their slogans and plans, and lets you stand for
+mayor: type a slogan and what you will do. (Right-clicking the Town Hall block with a signed book works
+too: the title is the slogan, the text the platform.) With Simple Voice Chat you then have 30 seconds
+to give a speech, and you can speak again during the campaign. Citizens nearby hear it and pass it on,
+so every citizen votes on what actually reached them, and on how they feel about you after your
+conversations. While citizens vote, the window fills with a live tally and each voter's reason. The box
+shows the phase: a poster during the campaign, a flag while voting is open.
 
 The campaign lasts one Minecraft day. If you're the only candidate, the unhappiest citizen stands
 against you, with a platform built from the colony's real problems, so you can lose. Then every grown

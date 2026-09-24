@@ -1,0 +1,46 @@
+<window xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" size="400 244"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/ldtteam/BlockUI/version/main/src/main/resources/assets/blockui/gui/block_ui.xsd">
+    <image source="minecolonies:textures/gui/builderhut/builder_paper_wide2.png" size="400 244"/>
+
+    <button id="close" size="14 15" pos="375 10" source="minecolonies:textures/gui/button_x.png" textcolor="black"/>
+
+    <text id="title" size="400 13" pos="0 13" color="black" textalign="MIDDLE"/>
+    <text id="status" size="340 20" pos="30 26" color="#555555" textscale="0.8" textalign="MIDDLE" wrap="true"/>
+
+    <text size="180 10" pos="22 48" color="black" label="$(tc_townhall.gui.ballot_box.candidates)"/>
+    <text id="nobody" size="170 40" pos="25 70" color="#555555" textscale="0.8" wrap="true" label="$(tc_townhall.gui.ballot_box.nobody)"/>
+    <list id="candidates" size="180 172" pos="20 60">
+        <box size="100% 58" linewidth="1">
+            <text id="name" size="172 10" pos="4 3" color="black"/>
+            <text id="slogan" size="172 10" pos="4 13" color="#6b3a12" textscale="0.8"/>
+            <text id="platform" size="172 24" pos="4 23" color="#333333" textscale="0.6" wrap="true"/>
+            <gradient id="bar" size="1 5" pos="4 49"/>
+            <text id="votes" size="44 8" pos="130 48" color="#333333" textscale="0.6"/>
+        </box>
+    </list>
+
+    <view id="form" size="172 182" pos="210 48">
+        <text id="formTitle" size="172 10" pos="0 0" color="black" label="$(tc_townhall.gui.ballot_box.stand_title)"/>
+        <text id="sloganLabel" size="172 8" pos="0 13" color="#555555" textscale="0.7" label="$(tc_townhall.gui.ballot_box.slogan)"/>
+        <input id="sloganInput" size="172 16" pos="0 22" maxlength="60"/>
+        <text id="platformLabel" size="172 8" pos="0 42" color="#555555" textscale="0.7" label="$(tc_townhall.gui.ballot_box.platform)"/>
+        <input id="platformInput" size="172 16" pos="0 51" maxlength="300"/>
+        <button id="stand" size="86 17" pos="43 73" textcolor="black"
+                source="minecolonies:textures/gui/builderhut/builder_button_medium.png"
+                label="$(tc_townhall.gui.ballot_box.stand)"/>
+        <button id="speak" size="86 17" pos="43 94" textcolor="black"
+                source="minecolonies:textures/gui/builderhut/builder_button_medium.png"
+                label="$(tc_townhall.gui.ballot_box.speak)"/>
+        <text id="hint" size="172 66" pos="0 116" color="#333333" textscale="0.7" wrap="true"/>
+    </view>
+
+    <view id="results" size="172 182" pos="210 48">
+        <text size="172 10" pos="0 0" color="black" label="$(tc_townhall.gui.ballot_box.reasons)"/>
+        <list id="reasons" size="172 168" pos="0 12">
+            <box size="100% 42" linewidth="1">
+                <text id="who" size="166 9" pos="3 2" color="black" textscale="0.7"/>
+                <text id="why" size="166 30" pos="3 11" color="#333333" textscale="0.6" wrap="true"/>
+            </box>
+        </list>
+    </view>
+</window>

@@ -21,10 +21,10 @@ import java.util.WeakHashMap;
 
 /** The notes waiting in a suggestion box, saved with the block and synced to clients for its window. */
 public class SuggestionBoxBlockEntity extends BlockEntity {
-    /** At most this many notes wait in a box; citizens stop writing until some are taken. */
     /** Block actions sent by the suggestion box window. */
     public static final String TAKE = "suggestion_take";
     public static final String DISCARD = "suggestion_discard";
+    /** At most this many notes wait in a box; citizens stop writing until some are taken. */
     public static final int MAX_NOTES = 6;
 
     /** One note: who wrote it, their job (may be blank), the colony day and the text. */

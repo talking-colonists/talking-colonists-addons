@@ -118,20 +118,24 @@ final class PlaytestCommand {
         return 1;
     }
 
-    /** A campaign book to stand for mayor with, and a Suggestion Box block. */
+    /** A campaign book to stand for mayor with, a Ballot Box and a Suggestion Box. */
     private static int townHall(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         ItemStack campaign = WrittenBooks.create("Walls before winter", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
                 List.of(Component.literal("I will build a wall around the colony before winter, hire two guards, and open "
                         + "a bakery so nobody goes hungry.")));
-        ItemStack box = new ItemStack(BuiltInRegistries.ITEM.getOptional(ResourceLocation.tryParse("tc_townhall:suggestion_box")).orElse(Items.AIR));
-        for (ItemStack stack : List.of(campaign, box)) {
+        for (ItemStack stack : List.of(campaign, addonItem("tc_townhall:ballot_box"), addonItem("tc_townhall:suggestion_box"))) {
             if (stack.isEmpty()) continue;
             if (!player.getInventory().add(stack)) player.drop(stack, false);
         }
-        context.getSource().sendSuccess(() -> Component.literal("[Playtest] Right-click the Town Hall block holding \"Walls before winter\" "
-                + "to stand for mayor, then speak for up to 30 s. Place the Suggestion Box anywhere in the colony and right-click it to read the notes."), false);
+        context.getSource().sendSuccess(() -> Component.literal("[Playtest] Place the Ballot Box in your colony and right-click it: stand for mayor "
+                + "there (or right-click the Town Hall block holding \"Walls before winter\"), then speak for up to 30 s. "
+                + "Place the Suggestion Box anywhere in the colony and right-click it to read the notes."), false);
         return 1;
+    }
+
+    private static ItemStack addonItem(String id) {
+        return new ItemStack(BuiltInRegistries.ITEM.getOptional(ResourceLocation.tryParse(id)).orElse(Items.AIR));
     }
 
     private static IColony colony(ServerPlayer player) {
