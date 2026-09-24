@@ -62,12 +62,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: talking-colonists/talking-colonists
-          path: .talking-colonists
+          path: talking-colonists-src
           fetch-depth: 1
 
       - name: Install Talking Colonists into Maven Local
         if: steps.tc.outputs.released == 'false'
-        working-directory: .talking-colonists
+        working-directory: talking-colonists-src
         run: ./gradlew :1.21.1-neoforge:publishToMavenLocal :1.20.1-forge:publishToMavenLocal --no-daemon
 
       - name: Build with Gradle

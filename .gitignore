@@ -55,4 +55,4 @@ bin/
 !.idea/runConfigurations/Run_Active_Server.xml
 
 # CI checks out Talking Colonists here when it builds an unreleased version
-.talking-colonists/
+talking-colonists-src/
