@@ -174,10 +174,9 @@ public final class Couriers {
         if (job.ticks % 100 == 0) {
             logger.debug("Delivery {}: {} blocks to go", job.key, Math.round(Math.sqrt(distanceSq)));
         }
-        // MineColonies' navigator only implements moveTo(x, y, z): moveTo(entity) falls back to vanilla
-        // pathing, which citizens cannot use. Aim at the block above what the player stands on (a jumping
-        // or flying player is not a walkable target), and take the path back whenever the citizen's own
-        // AI (wandering, work) sent them somewhere else.
+        // moveTo(entity) walks to the player's block position, which is not walkable while they jump or
+        // fly. Aim at the block above what the player stands on instead, and take the path back whenever
+        // the citizen's own AI (wandering, work) sent them somewhere else.
         net.minecraft.core.BlockPos feet = player.getOnPos().above();
         net.minecraft.core.BlockPos heading = job.carrier.getNavigation().getTargetPos();
         boolean offCourse = heading == null || heading.distSqr(feet) > 4 || job.carrier.getNavigation().isDone();
