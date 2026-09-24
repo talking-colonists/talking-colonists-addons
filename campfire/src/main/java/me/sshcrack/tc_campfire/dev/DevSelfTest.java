@@ -3,10 +3,14 @@ package me.sshcrack.tc_campfire.dev;
 import com.minecolonies.api.colony.ICitizenData;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.IColonyManager;
+import com.minecolonies.api.entity.ai.statemachine.states.CitizenAIState;
+import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
+import com.minecolonies.core.entity.citizen.EntityCitizen;
 import com.mojang.authlib.GameProfile;
 import me.sshcrack.mc_talking.api.colony.ColonyEventService;
 import me.sshcrack.tc_campfire.CampfireDirector;
 import me.sshcrack.tc_campfire.CampfireNights;
+import me.sshcrack.tc_campfire.Gathering;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -28,7 +32,8 @@ import java.util.UUID;
  * Dev-only end-to-end check, run by the {@code selfTestServer} Gradle run
  * ({@code -Dtc_campfire.selftest=true}); excluded from the release jar. It creates a colony with three
  * citizens and a lit campfire, runs a real campfire night through Talking Colonists (Gemini Live), and
- * checks that at least one story was told and recorded as colony news. Logs
+ * checks that at least one story was told and recorded as colony news. It runs at night and checks that the
+ * tellers' MineColonies routine never turns to sleep while the story is told (they would walk off to bed). Logs
  * {@code TC_CAMPFIRE_SELFTEST_SUCCESS} or {@code TC_CAMPFIRE_SELFTEST_FAIL} and stops the server.
  */
 public final class DevSelfTest {
@@ -39,6 +44,9 @@ public final class DevSelfTest {
     private static int ticks;
     private static boolean done;
     private static IColony colony;
+    private static Gathering gathering;
+    private static int samples;
+    private static String wentToBed = "";
 
     private DevSelfTest() {
     }
@@ -48,6 +56,7 @@ public final class DevSelfTest {
         ticks++;
         try {
             if (ticks == START_TICK) start(server);
+            else if (ticks > START_TICK && ticks % 20 == 0) sample();
             else if (ticks > TIMEOUT_TICKS) fail(server, "timed out waiting for the campfire night");
         } catch (RuntimeException | Error e) {
             CampfireNights.LOGGER.error("Self-test crashed", e);
@@ -57,6 +66,7 @@ public final class DevSelfTest {
 
     private static void start(MinecraftServer server) {
         ServerLevel level = server.overworld();
+        level.setDayTime(13_000); // dusk: MineColonies' routine wants its citizens in bed
         BlockPos center = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, level.getSharedSpawnPos());
         ServerPlayer owner = FakePlayerFactory.get(level, OWNER);
         colony = IColonyManager.getInstance().createColony(level, center, owner, "Selftest Embers", "Colonial");
@@ -72,13 +82,29 @@ public final class DevSelfTest {
 
         CampfireDirector director = CampfireNights.director();
         require(director != null, "director running");
-        require(director.start(colony, level, fire, 2, message -> finish(server, message)) != null,
-                "the night starts with the three citizens");
+        gathering = director.start(colony, level, fire, 2, message -> finish(server, message));
+        require(gathering != null, "the night starts with the three citizens");
         CampfireNights.LOGGER.info("TC_CAMPFIRE_SELFTEST: gathering at {}", fire);
+    }
+
+    /** While the story is told, no teller's routine may turn to sleep. */
+    private static void sample() {
+        if (gathering == null || gathering.phase() != Gathering.Phase.TELLING) return;
+        for (AbstractEntityCitizen teller : gathering.tellers()) {
+            if (teller instanceof EntityCitizen citizen && citizen.getCitizenAI().getState() == CitizenAIState.SLEEP) {
+                wentToBed = teller.getName().getString();
+            }
+        }
+        samples++;
     }
 
     private static void finish(MinecraftServer server, String summary) {
         if (done) return;
+        CampfireNights.LOGGER.info("TC_CAMPFIRE_SELFTEST: checked the tellers' routine {} times during the story", samples);
+        if (!wentToBed.isEmpty()) {
+            fail(server, wentToBed + "'s routine turned to sleep during the story");
+            return;
+        }
         CampfireNights.LOGGER.info("TC_CAMPFIRE_SELFTEST: {}", summary);
         var news = ColonyEventService.recent(colony, Duration.ofHours(1)).stream()
                 .filter(event -> CampfireNights.MOD_ID.equals(event.addonNamespace()))

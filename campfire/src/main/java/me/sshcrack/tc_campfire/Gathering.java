@@ -33,7 +33,7 @@ import java.util.function.Consumer;
  * true once it is over.
  */
 public final class Gathering {
-    enum Phase { GATHERING, TELLING, DONE }
+    public enum Phase { GATHERING, TELLING, DONE }
 
     static final int GATHER_TIMEOUT_TICKS = 20 * 45;
     static final int TELLING_TIMEOUT_TICKS = 20 * 60 * 8;
@@ -73,11 +73,11 @@ public final class Gathering {
         tellListeners(names() + " gather around the campfire to tell stories.");
     }
 
-    Phase phase() {
+    public Phase phase() {
         return phase;
     }
 
-    List<AbstractEntityCitizen> tellers() {
+    public List<AbstractEntityCitizen> tellers() {
         return tellers;
     }
 
