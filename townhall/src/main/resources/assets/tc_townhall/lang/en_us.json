@@ -1,0 +1,8 @@
+{
+  "block.tc_townhall.suggestion_box": "Suggestion Box",
+  "tc_townhall.gui.suggestion_box.title": "Suggestion Box",
+  "tc_townhall.gui.suggestion_box.hint": "Unhappy citizens drop a short note here each morning.",
+  "tc_townhall.gui.suggestion_box.empty": "No notes yet. Citizens who have something on their mind write one in the morning.",
+  "tc_townhall.gui.suggestion_box.day": "Day %s",
+  "tc_townhall.gui.suggestion_box.take": "Take"
+}

@@ -5,7 +5,10 @@ import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.IColonyManager;
 import com.mojang.authlib.GameProfile;
 import me.sshcrack.tc_townhall.Elections;
+import me.sshcrack.tc_townhall.SuggestionBox;
 import me.sshcrack.tc_townhall.TownHall;
+import me.sshcrack.tc_townhall.block.SuggestionBoxBlockEntity;
+import me.sshcrack.tc_townhall.block.TownHallBlocks;
 import me.sshcrack.tc_townhall.shared.book.WrittenBooks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -29,7 +32,7 @@ import java.util.UUID;
  * ({@code -Dtc_townhall.selftest=true}); excluded from the release jar. It creates a colony with three
  * citizens, has a player stand for mayor with a book, rushes the campaign so a citizen rival stands
  * (real Talking Colonists text generation), rushes again, and waits for the citizens' votes and the
- * result. Logs {@code TC_TOWNHALL_SELFTEST_SUCCESS} or {@code TC_TOWNHALL_SELFTEST_FAIL} and stops the server.
+ * result. It also places a Suggestion Box in the colony and checks the box is found and keeps notes. Logs {@code TC_TOWNHALL_SELFTEST_SUCCESS} or {@code TC_TOWNHALL_SELFTEST_FAIL} and stops the server.
  */
 public final class DevSelfTest {
     private static final GameProfile CANDIDATE = new GameProfile(UUID.fromString("74635f74-6f77-6e68-616c-6c73656c6674"), "mayor_selftest");
@@ -67,6 +70,12 @@ public final class DevSelfTest {
             ICitizenData data = colony.getCitizenManager().createAndRegisterCivilianData();
             colony.getCitizenManager().spawnOrCreateCivilian(data, level, List.of(center.offset(-1 + i, 1, 3)), true);
         }
+        BlockPos boxPos = center.offset(3, 1, 0);
+        level.setBlockAndUpdate(boxPos, TownHallBlocks.SUGGESTION_BOX.get().defaultBlockState());
+        SuggestionBoxBlockEntity box = SuggestionBox.find(colony, level);
+        require(box != null && box.getBlockPos().equals(boxPos), "the colony's Suggestion Box is found");
+        box.add(new SuggestionBoxBlockEntity.Note("Selftest", "builder", colony.getDay(), "We need a bakery."));
+        require(box.notes().size() == 1 && box.remove(0) != null && box.notes().isEmpty(), "the box keeps and gives up notes");
         ItemStack book = WrittenBooks.create("Walls before wishes", "mayor_selftest", WrittenBooks.ORIGINAL, List.of(
                 Component.literal("I will build a wall around the colony before winter, hire two guards, and open "
                         + "a bakery so nobody goes hungry.")));

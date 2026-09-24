@@ -13,8 +13,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.storage.LevelResource;
 /*? if forge {*/
 /*import net.minecraftforge.common.MinecraftForge;
@@ -24,8 +26,11 @@ import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 *//*?}*/
 /*? if neoforge {*/
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -41,9 +46,12 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import me.sshcrack.tc_townhall.block.SuggestionBoxBlockEntity;
+import me.sshcrack.tc_townhall.block.TownHallBlocks;
 import me.sshcrack.tc_townhall.dev.DevSelfTest;
+import me.sshcrack.tc_townhall.shared.net.BlockActions;
 
-/** Mod entry point: stand for mayor at the Town Hall block, and the suggestion box next to it. */
+/** Mod entry point: stand for mayor at the Town Hall block, and the Suggestion Box block. */
 @Mod(TownHall.MOD_ID)
 public class TownHall {
     public static final String MOD_ID = /*$ mod_id*/ "tc_townhall";
@@ -57,7 +65,25 @@ public class TownHall {
     private static @Nullable SuggestionBox suggestions;
     private static @Nullable MinecraftServer server;
 
-    public TownHall() {
+    /*? if neoforge {*/
+    public TownHall(IEventBus modBus, ModContainer container) {
+    /*?}*/
+    /*? if forge {*/
+    /*public TownHall() {
+        var modBus = FMLJavaModLoadingContext.get().getModEventBus();
+    *//*?}*/
+        // The blocks always register, so worlds that contain them load even when the addon stays inactive.
+        TownHallBlocks.register(modBus);
+        /*? if neoforge {*/
+        BlockActions.init(MOD_ID, modBus);
+        /*?}*/
+        /*? if forge {*/
+        /*BlockActions.init(MOD_ID);
+        *//*?}*/
+        BlockActions.on(SuggestionBoxBlockEntity.TAKE, TownHall::takeNote);
+        BlockActions.on(SuggestionBoxBlockEntity.DISCARD, (player, pos, index) -> {
+            if (player.level().getBlockEntity(pos) instanceof SuggestionBoxBlockEntity box) box.remove(index);
+        });
         if (!TalkingColonistsApi.isAvailable() || !TalkingColonistsApi.supports(ApiFeature.BROADCAST_PUBLISHING)
                 || !TalkingColonistsApi.supports(ApiFeature.TEXT_GENERATION)) {
             LOGGER.warn("Town Hall needs Talking Colonists 2.1 or newer (broadcasts, text generation); it stays inactive");
@@ -140,6 +166,16 @@ public class TownHall {
         IColony colony = IColonyManager.getInstance().getIColony(serverLevel, pos);
         if (colony == null || !Elections.isTownHall(colony, pos)) return;
         elections.stand(player, colony, event.getItemStack(), pos);
+    }
+
+    /** A player takes a note out of the suggestion box, as a one-page book. */
+    private static void takeNote(ServerPlayer player, BlockPos pos, int index) {
+        BlockEntity entity = player.level().getBlockEntity(pos);
+        if (!(entity instanceof SuggestionBoxBlockEntity box)) return;
+        SuggestionBoxBlockEntity.Note note = box.remove(index);
+        if (note == null) return;
+        ItemStack book = SuggestionBox.note(note.writer(), note.text());
+        if (!player.getInventory().add(book)) player.drop(book, false);
     }
 
     /** The running elections, or null while no server runs. */

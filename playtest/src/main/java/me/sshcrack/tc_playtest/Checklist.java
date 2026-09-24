@@ -52,8 +52,8 @@ final class Checklist {
                     new Button("Get a notice", "/playtest notice", "A lectern, a bell and signed notices"),
                     new Button("Replies now", "/noticeboard rush", "Citizens write their replies within seconds"))),
             new Section("tc_townhall", "Town Hall",
-                    "Right-click the Town Hall block with a signed book to stand for mayor, then give a speech; citizens vote. A barrel next to it is the suggestion box.", List.of(
-                    new Button("Get a campaign", "/playtest townhall", "A campaign book and a barrel for the suggestion box"),
+                    "Right-click the Town Hall block with a signed book to stand for mayor, then give a speech; citizens vote. Place the Suggestion Box block in the colony and right-click it to read the notes.", List.of(
+                    new Button("Get a campaign", "/playtest townhall", "A campaign book and a Suggestion Box block"),
                     new Button("Vote now", "/townhall rush", "The campaign ends now: a rival stands, then citizens vote"),
                     new Button("Notes now", "/townhall notes", "Unhappy citizens drop notes in the suggestion box now"))));
 

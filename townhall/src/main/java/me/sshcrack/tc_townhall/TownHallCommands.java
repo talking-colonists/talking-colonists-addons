@@ -36,7 +36,7 @@ final class TownHallCommands {
                     }
                     box.rush(colony);
                     context.getSource().sendSuccess(() -> Component.literal("Citizens of " + colony.getName()
-                            + " write their notes now, if there is a barrel next to the Town Hall block."), false);
+                            + " write their notes now, if the colony has a Suggestion Box."), false);
                     return 1;
                 })));
     }

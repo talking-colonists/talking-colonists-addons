@@ -92,8 +92,10 @@ citizen votes in character. The whole colony hears the result, a citizen brings 
 with a few voters' reasons, and the mayor is part of what citizens know from then on. A new election
 can be called three days later.
 
-Place a barrel within 4 blocks of the Town Hall block and it becomes the suggestion box: every morning
-up to three unhappy citizens drop a one-page note with a real concern or wish (at most 6 wait in it).
+Craft a Suggestion Box (paper over a chest over a log) and place it anywhere in the colony: every morning
+up to three unhappy citizens drop a short note with a real concern or wish (at most 6 wait in it). A
+paper sticks out of the slot while notes wait; right-click it to read them, take one along as a
+one-page book, or throw it away.
 
 - Operators: `/townhall rush` ends running campaigns now; `/townhall notes` has citizens write notes now.
 
