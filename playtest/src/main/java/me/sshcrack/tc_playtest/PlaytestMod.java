@@ -41,7 +41,10 @@ public class PlaytestMod {
             if (event.getEntity() instanceof ServerPlayer player) onJoin(player);
         });
         bus.addListener((RegisterCommandsEvent event) -> PlaytestCommand.register(event.getDispatcher()));
-        if (FMLEnvironment.dist == Dist.CLIENT) PlaytestClient.init();
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            PlaytestClient.init();
+            PlaytestScenario.init();
+        }
     }
 
     private static void onJoin(ServerPlayer player) {

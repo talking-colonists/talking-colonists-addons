@@ -56,6 +56,19 @@ legacyForge {
 			if (playtestAddons.isNotEmpty() && file("run/saves/TC_Playtest").isDirectory) {
 				programArguments.addAll("--quickPlaySingleplayer", "TC_Playtest")
 			}
+			// Speech timeline for scripts/speech-report.sh (who spoke when, overlaps, repeats).
+			if (playtestAddons.isNotEmpty()) systemProperty("mc_talking.speechTimeline", "true")
+		}
+		// Scripted headless playtest (scripts/scenario.sh): its own world, runs a scenario, quits.
+		if (playtestAddons.isNotEmpty()) register("scenarioClient") {
+			client()
+			gameDirectory = file("run/scenario/")
+			programArgument("--username=Dev")
+			if (file("run/scenario/saves/TC_Playtest").isDirectory) {
+				programArguments.addAll("--quickPlaySingleplayer", "TC_Playtest")
+			}
+			systemProperty("mc_talking.speechTimeline", "true")
+			systemProperty("tc_playtest.scenario", providers.gradleProperty("tcScenario").getOrElse("campfire"))
 		}
 		register("server") {
 			server()

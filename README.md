@@ -132,6 +132,25 @@ The Gemini key comes from the main repository's dev config (`../talking-colonist
 
 When you add an addon, add its section to `playtest/.../Checklist.java`.
 
+### Speech report and scripted scenarios
+
+The playtest clients log a speech timeline (Talking Colonists' `-Dmc_talking.speechTimeline`): every
+citizen voice with its kind, position, start and end, and every line that was heard. The report turns
+it into a timeline and flags overlapping voices, audio played without the speaking animation,
+near-repeats between citizens, and how often citizens addressed you unprompted:
+
+```sh
+bash scripts/speech-report.sh                  # your last NeoForge playtest (forge, or a log path)
+bash scripts/scenario.sh                       # scripted "campfire" run, headless, then the report
+bash scripts/scenario.sh ambient forge         # "ambient" scenario on 1.20.1 Forge
+```
+
+`scenario.sh` starts a headless client (xvfb; `TC_SCENARIO_VISIBLE=1` shows the window) in its own
+copy of the playtest world, plays the timed steps of `playtest/.../PlaytestScenario.java` as the
+player, quits and prints the report. Logs and JSON findings are kept in `build/scenario/`. It uses
+Gemini quota like a real session. The report script lives in the main repository
+(`scripts/speech-timeline-report.py`).
+
 ## Build and run
 
 ```sh
