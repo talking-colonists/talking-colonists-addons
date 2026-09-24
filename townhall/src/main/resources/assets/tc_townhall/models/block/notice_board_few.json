@@ -2,87 +2,88 @@
   "format_version": "1.9.0",
   "credit": "Made with Blockbench",
   "textures": {
-    "5": "tc_townhall:block/envelope_plate",
+    "4": "tc_townhall:block/pinned_note",
     "particle": "minecraft:block/oak_planks",
     "oak_planks": "minecraft:block/oak_planks",
-    "black_concrete": "minecraft:block/black_concrete",
-    "spruce_planks": "minecraft:block/spruce_planks",
-    "gold_block": "minecraft:block/gold_block"
+    "stripped_oak_log": "minecraft:block/stripped_oak_log",
+    "notice_board_cork": "tc_townhall:block/notice_board_cork",
+    "spruce_planks": "minecraft:block/spruce_planks"
   },
   "elements": [
     {
-      "name": "oak_body",
+      "name": "oak_foot_left",
       "from": [
-        2,
         0,
-        3
+        0,
+        6
       ],
       "to": [
-        14,
-        10,
-        13
+        4,
+        1,
+        10
       ],
       "rotation": {
         "angle": 0,
         "axis": "y",
         "origin": [
-          2,
           0,
-          3
+          0,
+          6
         ]
       },
       "faces": {
         "north": {
           "uv": [
-            2,
-            6,
-            14,
+            0,
+            15,
+            4,
             16
           ],
           "texture": "#oak_planks"
         },
         "east": {
           "uv": [
-            3,
             6,
-            13,
+            15,
+            10,
             16
           ],
           "texture": "#oak_planks"
         },
         "south": {
           "uv": [
-            2,
-            6,
-            14,
+            0,
+            15,
+            4,
             16
           ],
           "texture": "#oak_planks"
         },
         "west": {
           "uv": [
-            3,
             6,
-            13,
+            15,
+            10,
             16
           ],
-          "texture": "#oak_planks"
+          "texture": "#oak_planks",
+          "cullface": "west"
         },
         "up": {
           "uv": [
-            2,
-            3,
-            14,
-            13
+            0,
+            6,
+            4,
+            10
           ],
-          "texture": "#black_concrete"
+          "texture": "#oak_planks"
         },
         "down": {
           "uv": [
-            2,
-            3,
-            14,
-            13
+            0,
+            6,
+            4,
+            10
           ],
           "texture": "#oak_planks",
           "cullface": "down"
@@ -90,649 +91,653 @@
       }
     },
     {
-      "name": "oak_plinth",
+      "name": "oak_foot_right",
       "from": [
-        1,
+        12,
         0,
-        2
+        6
       ],
       "to": [
-        15,
+        16,
         1,
-        14
-      ],
-      "rotation": {
-        "angle": 0,
-        "axis": "y",
-        "origin": [
-          1,
-          0,
-          2
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            1,
-            15,
-            15,
-            16
-          ],
-          "texture": "#spruce_planks"
-        },
-        "east": {
-          "uv": [
-            2,
-            15,
-            14,
-            16
-          ],
-          "texture": "#spruce_planks"
-        },
-        "south": {
-          "uv": [
-            1,
-            15,
-            15,
-            16
-          ],
-          "texture": "#spruce_planks"
-        },
-        "west": {
-          "uv": [
-            2,
-            15,
-            14,
-            16
-          ],
-          "texture": "#spruce_planks"
-        },
-        "up": {
-          "uv": [
-            1,
-            2,
-            15,
-            14
-          ],
-          "texture": "#spruce_planks"
-        },
-        "down": {
-          "uv": [
-            1,
-            2,
-            15,
-            14
-          ],
-          "texture": "#spruce_planks",
-          "cullface": "down"
-        }
-      }
-    },
-    {
-      "name": "lid_front",
-      "from": [
-        1,
-        10,
-        2
-      ],
-      "to": [
-        15,
-        12,
-        6.5
-      ],
-      "rotation": {
-        "angle": 0,
-        "axis": "y",
-        "origin": [
-          1,
-          10,
-          2
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            1,
-            4,
-            15,
-            6
-          ],
-          "texture": "#oak_planks"
-        },
-        "east": {
-          "uv": [
-            2,
-            4,
-            6.5,
-            6
-          ],
-          "texture": "#oak_planks"
-        },
-        "south": {
-          "uv": [
-            1,
-            4,
-            15,
-            6
-          ],
-          "texture": "#oak_planks"
-        },
-        "west": {
-          "uv": [
-            2,
-            4,
-            6.5,
-            6
-          ],
-          "texture": "#oak_planks"
-        },
-        "up": {
-          "uv": [
-            1,
-            2,
-            15,
-            6.5
-          ],
-          "texture": "#oak_planks"
-        },
-        "down": {
-          "uv": [
-            1,
-            2,
-            15,
-            6.5
-          ],
-          "texture": "#oak_planks"
-        }
-      }
-    },
-    {
-      "name": "lid_back",
-      "from": [
-        1,
-        10,
-        7.5
-      ],
-      "to": [
-        15,
-        12,
-        14
-      ],
-      "rotation": {
-        "angle": 0,
-        "axis": "y",
-        "origin": [
-          1,
-          10,
-          7.5
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            1,
-            4,
-            15,
-            6
-          ],
-          "texture": "#oak_planks"
-        },
-        "east": {
-          "uv": [
-            7.5,
-            4,
-            14,
-            6
-          ],
-          "texture": "#oak_planks"
-        },
-        "south": {
-          "uv": [
-            1,
-            4,
-            15,
-            6
-          ],
-          "texture": "#oak_planks"
-        },
-        "west": {
-          "uv": [
-            7.5,
-            4,
-            14,
-            6
-          ],
-          "texture": "#oak_planks"
-        },
-        "up": {
-          "uv": [
-            1,
-            7.5,
-            15,
-            14
-          ],
-          "texture": "#oak_planks"
-        },
-        "down": {
-          "uv": [
-            1,
-            7.5,
-            15,
-            14
-          ],
-          "texture": "#oak_planks"
-        }
-      }
-    },
-    {
-      "name": "slot_left",
-      "from": [
-        1,
-        10,
-        6.5
-      ],
-      "to": [
-        4,
-        12,
-        7.5
-      ],
-      "rotation": {
-        "angle": 0,
-        "axis": "y",
-        "origin": [
-          1,
-          10,
-          6.5
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            1,
-            4,
-            4,
-            6
-          ],
-          "texture": "#oak_planks"
-        },
-        "east": {
-          "uv": [
-            6.5,
-            4,
-            7.5,
-            6
-          ],
-          "texture": "#oak_planks"
-        },
-        "south": {
-          "uv": [
-            1,
-            4,
-            4,
-            6
-          ],
-          "texture": "#oak_planks"
-        },
-        "west": {
-          "uv": [
-            6.5,
-            4,
-            7.5,
-            6
-          ],
-          "texture": "#oak_planks"
-        },
-        "up": {
-          "uv": [
-            1,
-            6.5,
-            4,
-            7.5
-          ],
-          "texture": "#oak_planks"
-        },
-        "down": {
-          "uv": [
-            1,
-            6.5,
-            4,
-            7.5
-          ],
-          "texture": "#oak_planks"
-        }
-      }
-    },
-    {
-      "name": "slot_right",
-      "from": [
-        12,
-        10,
-        6.5
-      ],
-      "to": [
-        15,
-        12,
-        7.5
+        10
       ],
       "rotation": {
         "angle": 0,
         "axis": "y",
         "origin": [
           12,
-          10,
+          0,
+          6
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            12,
+            15,
+            16,
+            16
+          ],
+          "texture": "#oak_planks"
+        },
+        "east": {
+          "uv": [
+            6,
+            15,
+            10,
+            16
+          ],
+          "texture": "#oak_planks",
+          "cullface": "east"
+        },
+        "south": {
+          "uv": [
+            12,
+            15,
+            16,
+            16
+          ],
+          "texture": "#oak_planks"
+        },
+        "west": {
+          "uv": [
+            6,
+            15,
+            10,
+            16
+          ],
+          "texture": "#oak_planks"
+        },
+        "up": {
+          "uv": [
+            12,
+            6,
+            16,
+            10
+          ],
+          "texture": "#oak_planks"
+        },
+        "down": {
+          "uv": [
+            12,
+            6,
+            16,
+            10
+          ],
+          "texture": "#oak_planks",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "name": "spruce_post_left",
+      "from": [
+        1,
+        1,
+        7
+      ],
+      "to": [
+        3,
+        14,
+        9
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          1,
+          1,
+          7
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            1,
+            2,
+            3,
+            15
+          ],
+          "texture": "#stripped_oak_log"
+        },
+        "east": {
+          "uv": [
+            7,
+            2,
+            9,
+            15
+          ],
+          "texture": "#stripped_oak_log"
+        },
+        "south": {
+          "uv": [
+            1,
+            2,
+            3,
+            15
+          ],
+          "texture": "#stripped_oak_log"
+        },
+        "west": {
+          "uv": [
+            7,
+            2,
+            9,
+            15
+          ],
+          "texture": "#stripped_oak_log"
+        },
+        "up": {
+          "uv": [
+            1,
+            7,
+            3,
+            9
+          ],
+          "texture": "#stripped_oak_log"
+        },
+        "down": {
+          "uv": [
+            1,
+            7,
+            3,
+            9
+          ],
+          "texture": "#stripped_oak_log"
+        }
+      }
+    },
+    {
+      "name": "spruce_post_right",
+      "from": [
+        13,
+        1,
+        7
+      ],
+      "to": [
+        15,
+        14,
+        9
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          13,
+          1,
+          7
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            13,
+            2,
+            15,
+            15
+          ],
+          "texture": "#stripped_oak_log"
+        },
+        "east": {
+          "uv": [
+            7,
+            2,
+            9,
+            15
+          ],
+          "texture": "#stripped_oak_log"
+        },
+        "south": {
+          "uv": [
+            13,
+            2,
+            15,
+            15
+          ],
+          "texture": "#stripped_oak_log"
+        },
+        "west": {
+          "uv": [
+            7,
+            2,
+            9,
+            15
+          ],
+          "texture": "#stripped_oak_log"
+        },
+        "up": {
+          "uv": [
+            13,
+            7,
+            15,
+            9
+          ],
+          "texture": "#stripped_oak_log"
+        },
+        "down": {
+          "uv": [
+            13,
+            7,
+            15,
+            9
+          ],
+          "texture": "#stripped_oak_log"
+        }
+      }
+    },
+    {
+      "name": "cork_panel",
+      "from": [
+        3,
+        5,
+        7.5
+      ],
+      "to": [
+        13,
+        13,
+        8.5
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          3,
+          5,
+          7.5
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            3,
+            4,
+            13,
+            12
+          ],
+          "texture": "#notice_board_cork"
+        },
+        "east": {
+          "uv": [
+            3,
+            4,
+            13,
+            5
+          ],
+          "texture": "#notice_board_cork"
+        },
+        "south": {
+          "uv": [
+            3,
+            4,
+            13,
+            12
+          ],
+          "texture": "#notice_board_cork"
+        },
+        "west": {
+          "uv": [
+            3,
+            4,
+            13,
+            5
+          ],
+          "texture": "#notice_board_cork"
+        },
+        "up": {
+          "uv": [
+            3,
+            4,
+            13,
+            5
+          ],
+          "texture": "#notice_board_cork"
+        },
+        "down": {
+          "uv": [
+            3,
+            4,
+            13,
+            5
+          ],
+          "texture": "#notice_board_cork"
+        }
+      }
+    },
+    {
+      "name": "oak_lower_frame",
+      "from": [
+        2,
+        4,
+        7
+      ],
+      "to": [
+        14,
+        5,
+        9
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          2,
+          4,
+          7
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            2,
+            11,
+            14,
+            12
+          ],
+          "texture": "#oak_planks"
+        },
+        "east": {
+          "uv": [
+            7,
+            11,
+            9,
+            12
+          ],
+          "texture": "#oak_planks"
+        },
+        "south": {
+          "uv": [
+            2,
+            11,
+            14,
+            12
+          ],
+          "texture": "#oak_planks"
+        },
+        "west": {
+          "uv": [
+            7,
+            11,
+            9,
+            12
+          ],
+          "texture": "#oak_planks"
+        },
+        "up": {
+          "uv": [
+            2,
+            7,
+            14,
+            9
+          ],
+          "texture": "#oak_planks"
+        },
+        "down": {
+          "uv": [
+            2,
+            7,
+            14,
+            9
+          ],
+          "texture": "#oak_planks"
+        }
+      }
+    },
+    {
+      "name": "oak_upper_frame",
+      "from": [
+        2,
+        13,
+        7
+      ],
+      "to": [
+        14,
+        14,
+        9
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          2,
+          13,
+          7
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            2,
+            2,
+            14,
+            3
+          ],
+          "texture": "#oak_planks"
+        },
+        "east": {
+          "uv": [
+            7,
+            2,
+            9,
+            3
+          ],
+          "texture": "#oak_planks"
+        },
+        "south": {
+          "uv": [
+            2,
+            2,
+            14,
+            3
+          ],
+          "texture": "#oak_planks"
+        },
+        "west": {
+          "uv": [
+            7,
+            2,
+            9,
+            3
+          ],
+          "texture": "#oak_planks"
+        },
+        "up": {
+          "uv": [
+            2,
+            7,
+            14,
+            9
+          ],
+          "texture": "#oak_planks"
+        },
+        "down": {
+          "uv": [
+            2,
+            7,
+            14,
+            9
+          ],
+          "texture": "#oak_planks"
+        }
+      }
+    },
+    {
+      "name": "spruce_roof_eave",
+      "from": [
+        0,
+        14,
+        6
+      ],
+      "to": [
+        16,
+        15,
+        10
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          0,
+          14,
+          6
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            1,
+            16,
+            2
+          ],
+          "texture": "#spruce_planks"
+        },
+        "east": {
+          "uv": [
+            6,
+            1,
+            10,
+            2
+          ],
+          "texture": "#spruce_planks",
+          "cullface": "east"
+        },
+        "south": {
+          "uv": [
+            0,
+            1,
+            16,
+            2
+          ],
+          "texture": "#spruce_planks"
+        },
+        "west": {
+          "uv": [
+            6,
+            1,
+            10,
+            2
+          ],
+          "texture": "#spruce_planks",
+          "cullface": "west"
+        },
+        "up": {
+          "uv": [
+            0,
+            6,
+            16,
+            10
+          ],
+          "texture": "#spruce_planks"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            16,
+            10
+          ],
+          "texture": "#spruce_planks"
+        }
+      }
+    },
+    {
+      "name": "spruce_roof_cap",
+      "from": [
+        1,
+        15,
+        6.5
+      ],
+      "to": [
+        15,
+        16,
+        9.5
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          1,
+          15,
           6.5
         ]
       },
       "faces": {
         "north": {
           "uv": [
-            12,
-            4,
+            1,
+            0,
             15,
-            6
+            1
           ],
-          "texture": "#oak_planks"
+          "texture": "#spruce_planks"
         },
         "east": {
           "uv": [
             6.5,
-            4,
-            7.5,
-            6
+            0,
+            9.5,
+            1
           ],
-          "texture": "#oak_planks"
+          "texture": "#spruce_planks"
         },
         "south": {
           "uv": [
-            12,
-            4,
+            1,
+            0,
             15,
-            6
+            1
           ],
-          "texture": "#oak_planks"
+          "texture": "#spruce_planks"
         },
         "west": {
           "uv": [
             6.5,
-            4,
-            7.5,
-            6
+            0,
+            9.5,
+            1
           ],
-          "texture": "#oak_planks"
+          "texture": "#spruce_planks"
         },
         "up": {
           "uv": [
-            12,
+            1,
             6.5,
             15,
-            7.5
+            9.5
           ],
-          "texture": "#oak_planks"
+          "texture": "#spruce_planks",
+          "cullface": "up"
         },
         "down": {
           "uv": [
-            12,
+            1,
             6.5,
             15,
-            7.5
+            9.5
           ],
-          "texture": "#oak_planks"
+          "texture": "#spruce_planks"
         }
       }
     },
     {
-      "name": "brass_lock",
-      "from": [
-        7,
-        7,
-        2.5
-      ],
-      "to": [
-        9,
-        10,
-        3
-      ],
-      "rotation": {
-        "angle": 0,
-        "axis": "y",
-        "origin": [
-          7,
-          7,
-          2.5
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        },
-        "east": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        },
-        "south": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        },
-        "west": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        },
-        "up": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        },
-        "down": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        }
-      }
-    },
-    {
-      "name": "brass_hinge_left",
-      "from": [
-        3,
-        8,
-        13
-      ],
-      "to": [
-        6,
-        10,
-        13.5
-      ],
-      "rotation": {
-        "angle": 0,
-        "axis": "y",
-        "origin": [
-          3,
-          8,
-          13
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        },
-        "east": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        },
-        "south": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        },
-        "west": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        },
-        "up": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        },
-        "down": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        }
-      }
-    },
-    {
-      "name": "brass_hinge_right",
-      "from": [
-        10,
-        8,
-        13
-      ],
-      "to": [
-        13,
-        10,
-        13.5
-      ],
-      "rotation": {
-        "angle": 0,
-        "axis": "y",
-        "origin": [
-          10,
-          8,
-          13
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        },
-        "east": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        },
-        "south": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        },
-        "west": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        },
-        "up": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        },
-        "down": {
-          "uv": [
-            9,
-            9,
-            12,
-            12
-          ],
-          "texture": "#gold_block"
-        }
-      }
-    },
-    {
-      "name": "note_plaque",
+      "name": "pinned_note_left",
       "from": [
         4,
-        3,
-        2.5
+        8,
+        7.3
       ],
       "to": [
-        9,
-        6,
-        3
+        7,
+        12,
+        7.45
       ],
       "rotation": {
         "angle": 0,
         "axis": "y",
         "origin": [
           4,
-          3,
-          2.5
+          8,
+          7.3
         ]
       },
       "faces": {
@@ -743,52 +748,130 @@
             16,
             16
           ],
-          "texture": "#5"
+          "texture": "#4"
         },
         "east": {
           "uv": [
-            4,
-            4,
-            12,
-            12
+            1.85,
+            0,
+            2,
+            4
           ],
-          "texture": "#5"
+          "texture": "#4"
         },
         "south": {
           "uv": [
-            4,
-            4,
-            12,
-            12
+            0,
+            0,
+            3,
+            4
           ],
-          "texture": "#5"
+          "texture": "#4"
         },
         "west": {
           "uv": [
-            4,
-            4,
-            12,
-            12
+            0,
+            0,
+            0.15,
+            4
           ],
-          "texture": "#5"
+          "texture": "#4"
         },
         "up": {
           "uv": [
-            4,
-            4,
-            12,
-            12
+            0,
+            0,
+            3,
+            0.15
           ],
-          "texture": "#5"
+          "texture": "#4"
         },
         "down": {
           "uv": [
-            4,
-            4,
-            12,
-            12
+            0,
+            1.85,
+            3,
+            2
           ],
-          "texture": "#5"
+          "texture": "#4"
+        }
+      }
+    },
+    {
+      "name": "pinned_note_tilted",
+      "from": [
+        8.5,
+        6.5,
+        7.3
+      ],
+      "to": [
+        11.5,
+        10,
+        7.45
+      ],
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          10,
+          8.25,
+          7.3
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#4"
+        },
+        "east": {
+          "uv": [
+            1.85,
+            0,
+            2,
+            4
+          ],
+          "texture": "#4"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            3,
+            4
+          ],
+          "texture": "#4"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            0.15,
+            4
+          ],
+          "texture": "#4"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            3,
+            0.15
+          ],
+          "texture": "#4"
+        },
+        "down": {
+          "uv": [
+            0,
+            1.85,
+            3,
+            2
+          ],
+          "texture": "#4"
         }
       }
     }
