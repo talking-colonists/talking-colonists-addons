@@ -121,8 +121,8 @@ public final class LetterText {
     }
 
     /**
-     * "Re: <title>" when it fits a book title and the title is more than the recipient's name,
-     * otherwise "Letter from <first name>".
+     * "Re: {@code title}" when it fits a book title and the title is more than the recipient's name,
+     * otherwise "Letter from" plus the first name.
      */
     public static String replyTitle(String letterTitle, String fromName) {
         String re = "Re: " + letterTitle.strip();
