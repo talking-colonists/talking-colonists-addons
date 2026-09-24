@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 884 884" width="884" height="884">
+  <!-- Town Hall: a ballot going into a ballot box. -->
+  <rect width="884" height="884" fill="#333"/>
+  <path d="M622 150 Q638 232 720 248 Q638 264 622 346 Q606 264 524 248 Q606 232 622 150 Z" fill="#ddd" stroke="#ddd" stroke-width="18" stroke-linejoin="round"/>
+  <g transform="translate(-10 40) scale(0.9) translate(10 20)">
+  <!-- ballot, half in the slot, with a tick -->
+  <rect x="290" y="250" width="200" height="230" rx="16" fill="#ddd" transform="rotate(-8 390 365)"/>
+  <path d="M335 370 L380 415 L455 320" fill="none" stroke="#333" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" transform="rotate(-8 390 365)"/>
+  <!-- box -->
+  <rect x="150" y="440" width="480" height="310" rx="34" fill="#ddd"/>
+  <!-- slot -->
+  <rect x="270" y="470" width="240" height="26" rx="13" fill="#333"/>
+  <!-- label -->
+  <rect x="250" y="560" width="280" height="110" rx="18" fill="#333"/>
+  <rect x="290" y="600" width="200" height="30" rx="12" fill="#ddd"/>
+  </g>
+</svg>

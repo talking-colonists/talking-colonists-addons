@@ -4,6 +4,7 @@ import com.minecolonies.api.colony.ICitizenData;
 import com.minecolonies.api.colony.IColony;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import me.sshcrack.mc_talking.api.colony.AddonColonyEvent;
 import me.sshcrack.mc_talking.api.colony.ColonyEventService;
 import net.minecraft.commands.CommandSourceStack;
@@ -33,10 +34,11 @@ final class PlaytestCommand {
                 .then(Commands.literal("news").executes(PlaytestCommand::news))
                 .then(Commands.literal("letter").executes(PlaytestCommand::letter))
                 .then(Commands.literal("visitor").executes(PlaytestCommand::visitor))
-                .then(Commands.literal("notice").executes(PlaytestCommand::notice)));
+                .then(Commands.literal("notice").executes(PlaytestCommand::notice))
+                .then(Commands.literal("townhall").executes(PlaytestCommand::townHall)));
     }
 
-    private static int home(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+    private static int home(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         IColony colony = colony(player);
         if (colony == null) return 0;
@@ -45,7 +47,7 @@ final class PlaytestCommand {
         return 1;
     }
 
-    private static int news(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+    private static int news(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         IColony colony = colony(player);
         if (colony == null) return 0;
@@ -63,7 +65,7 @@ final class PlaytestCommand {
     }
 
     /** A signed letter addressed to a random citizen, ready to hand over. */
-    private static int letter(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+    private static int letter(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         IColony colony = colony(player);
         if (colony == null) return 0;
@@ -81,7 +83,7 @@ final class PlaytestCommand {
     }
 
     /** Teleports next to a loaded tavern visitor and says what they ask to join. */
-    private static int visitor(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+    private static int visitor(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         IColony colony = colony(player);
         if (colony == null) return 0;
@@ -99,7 +101,7 @@ final class PlaytestCommand {
     }
 
     /** A lectern with a notice to put on it, and a bell with an announcement to ring. */
-    private static int notice(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+    private static int notice(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         ItemStack notice = WrittenBooks.create("Harvest fair", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
                 List.of(Component.literal("Next Sunday we hold a harvest fair at the town hall. Bring your best pumpkins; "
@@ -111,6 +113,20 @@ final class PlaytestCommand {
             if (!player.getInventory().add(stack)) player.drop(stack, false);
         }
         context.getSource().sendSuccess(() -> Component.literal("[Playtest] Place the lectern in the colony and put \"Harvest fair\" on it. Place the bell and ring it holding \"Fair today\"."), false);
+        return 1;
+    }
+
+    /** A campaign book to stand for mayor with, and a barrel for the suggestion box. */
+    private static int townHall(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        ItemStack campaign = WrittenBooks.create("Walls before winter", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
+                List.of(Component.literal("I will build a wall around the colony before winter, hire two guards, and open "
+                        + "a bakery so nobody goes hungry.")));
+        for (ItemStack stack : List.of(campaign, new ItemStack(Items.BARREL))) {
+            if (!player.getInventory().add(stack)) player.drop(stack, false);
+        }
+        context.getSource().sendSuccess(() -> Component.literal("[Playtest] Right-click the Town Hall block holding \"Walls before winter\" "
+                + "to stand for mayor, then speak for up to 30 s. Place the barrel within 4 blocks of the Town Hall block: it becomes the suggestion box."), false);
         return 1;
     }
 

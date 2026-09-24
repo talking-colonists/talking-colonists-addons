@@ -50,7 +50,12 @@ final class Checklist {
             new Section("tc_noticeboard", "Notice Board",
                     "A signed book on a lectern becomes a notice with pinned replies; ring a bell holding a book to tell everyone.", List.of(
                     new Button("Get a notice", "/playtest notice", "A lectern, a bell and signed notices"),
-                    new Button("Replies now", "/noticeboard rush", "Citizens write their replies within seconds"))));
+                    new Button("Replies now", "/noticeboard rush", "Citizens write their replies within seconds"))),
+            new Section("tc_townhall", "Town Hall",
+                    "Right-click the Town Hall block with a signed book to stand for mayor, then give a speech; citizens vote. A barrel next to it is the suggestion box.", List.of(
+                    new Button("Get a campaign", "/playtest townhall", "A campaign book and a barrel for the suggestion box"),
+                    new Button("Vote now", "/townhall rush", "The campaign ends now: a rival stands, then citizens vote"),
+                    new Button("Notes now", "/townhall notes", "Unhappy citizens drop notes in the suggestion box now"))));
 
     private Checklist() {
     }

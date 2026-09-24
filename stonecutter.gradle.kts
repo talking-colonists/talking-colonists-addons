@@ -87,6 +87,7 @@ val sharedPackages = mapOf(
 	"postal" to listOf("book", "delivery", "provider", "store"),
 	"tavern" to listOf("store"),
 	"noticeboard" to listOf("book", "provider", "store"),
+	"townhall" to listOf("book", "delivery", "provider", "store"),
 	"playtest" to listOf("book"),
 )
 val sharedHeader = "// GENERATED from shared/: edit it there, then run ./gradlew syncShared\n"
