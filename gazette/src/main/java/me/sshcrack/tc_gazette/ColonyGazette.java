@@ -75,6 +75,9 @@ public class ColonyGazette {
                 List.of(
                         "Quiet days with nothing to report get no issue.",
                         "Operators: /gazette publish writes an issue now, /gazette hands you a copy."));
+        Guides.introduce(MOD_ID + ":newspaper", "the Colony Gazette",
+                "Tell them the colony writes its own newspaper each morning about the day before, and that someone brings them every new issue.",
+                MOD_ID + ":guide", (player, colony) -> colony.getDay() >= 1);
     }
 
     /** The running publisher, or null while no server runs. */
