@@ -81,6 +81,14 @@ public class CampfireNights {
                         "There is at most one campfire night per colony and day, and only while the citizens' voices are not all busy.",
                         "The night becomes colony news, so the Colony Gazette may report it.",
                         "Operators: /campfire start begins one at the nearest campfire, /campfire stop ends it."));
+        Guides.introduce(MOD_ID + ":first_dusk", "campfire nights",
+                "Invite them to the campfire tonight: at dusk, citizens gather around a lit campfire in the colony to sit and tell stories, and anyone standing by the fire can listen and join in.",
+                MOD_ID + ":guide", (player, colony) -> {
+                    // Before or around dusk, not while a night is already running: then the player is there anyway.
+                    long time = player.level().getDayTime() % 24000;
+                    CampfireDirector running = director;
+                    return time >= 11000 && time < 13500 && (running == null || running.gatheringOf(colony) == null);
+                });
     }
 
     /** The running director, or null while no server runs. */
