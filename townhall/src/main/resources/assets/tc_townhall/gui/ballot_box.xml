@@ -2,7 +2,7 @@
         xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/ldtteam/BlockUI/version/main/src/main/resources/assets/blockui/gui/block_ui.xsd">
     <image source="minecolonies:textures/gui/builderhut/builder_paper_wide2.png" size="400 244"/>
 
-    <button id="close" size="14 15" pos="375 10" source="minecolonies:textures/gui/button_x.png" textcolor="black"/>
+    <button id="close" size="14 15" pos="375 10" source="minecolonies:textures/gui/button_x.png" textcolor="black" texthovercolor="#8a5a2b"/>
 
     <text id="title" size="400 13" pos="0 13" color="black" textalign="MIDDLE"/>
     <text id="status" size="340 20" pos="30 26" color="#555555" textscale="0.8" textalign="MIDDLE" wrap="true"/>
@@ -23,10 +23,10 @@
         <text size="180 10" pos="2 0" color="black" label="$(tc_townhall.gui.ballot_box.office)"/>
         <text id="promises" size="176 70" pos="2 12" color="#333333" textscale="0.6" wrap="true"/>
         <text id="proposal" size="176 26" pos="2 84" color="#6b3a12" textscale="0.7" wrap="true"/>
-        <button id="accept" size="86 17" pos="2 112" textcolor="black"
+        <button id="accept" size="86 17" pos="2 112" textcolor="black" texthovercolor="#8a5a2b"
                 source="minecolonies:textures/gui/builderhut/builder_button_medium.png"
                 label="$(tc_townhall.gui.ballot_box.accept)"/>
-        <button id="refuse" size="86 17" pos="92 112" textcolor="black"
+        <button id="refuse" size="86 17" pos="92 112" textcolor="black" texthovercolor="#8a5a2b"
                 source="minecolonies:textures/gui/builderhut/builder_button_medium.png"
                 label="$(tc_townhall.gui.ballot_box.refuse)"/>
         <text id="earlier" size="176 50" pos="2 134" color="#555555" textscale="0.55" wrap="true"/>
@@ -38,10 +38,10 @@
         <input id="sloganInput" size="172 16" pos="0 22" maxlength="60"/>
         <text id="platformLabel" size="172 8" pos="0 42" color="#555555" textscale="0.7" label="$(tc_townhall.gui.ballot_box.platform)"/>
         <input id="platformInput" size="172 16" pos="0 51" maxlength="300"/>
-        <button id="stand" size="86 17" pos="43 73" textcolor="black"
+        <button id="stand" size="86 17" pos="43 73" textcolor="black" texthovercolor="#8a5a2b"
                 source="minecolonies:textures/gui/builderhut/builder_button_medium.png"
                 label="$(tc_townhall.gui.ballot_box.stand)"/>
-        <button id="speak" size="86 17" pos="43 94" textcolor="black"
+        <button id="speak" size="86 17" pos="43 94" textcolor="black" texthovercolor="#8a5a2b"
                 source="minecolonies:textures/gui/builderhut/builder_button_medium.png"
                 label="$(tc_townhall.gui.ballot_box.speak)"/>
         <text id="hint" size="172 66" pos="0 116" color="#333333" textscale="0.7" wrap="true"/>

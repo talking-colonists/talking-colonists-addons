@@ -18,6 +18,8 @@ public final class Office {
     public static final int ANSWER_DAYS = 2;
     /** An accepted "build a new ..." proposal must show a placed hut within this many days. */
     public static final int BUILD_DAYS = 3;
+    /** A placed hut the builders have not finished this many days later is left to the builders. */
+    public static final int CONSTRUCTION_DAYS = 6;
     /** An accepted upgrade the builder has not finished after this many days is left to the builder. */
     public static final int UPGRADE_DAYS = 6;
     /** After a refused or ignored proposal, the mayor waits this long before proposing for the same need. */
@@ -68,6 +70,8 @@ public final class Office {
         public String player = "";
         public @Nullable UUID playerId;
         public int answeredDay = -1;
+        /** For "build a new ...": the day its hut was placed, -1 before. */
+        public int placedDay = -1;
         public String reason = "";
 
         /** "upgrade the residence to level 2", "have the builder build the hospital", "build a hospital". */

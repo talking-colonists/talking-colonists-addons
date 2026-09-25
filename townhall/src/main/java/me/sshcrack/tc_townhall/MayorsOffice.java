@@ -367,11 +367,33 @@ public final class MayorsOffice {
             if (day - proposal.madeDay < Office.ANSWER_DAYS) return false;
             proposal.status = Office.ProposalStatus.IGNORED;
         } else if (proposal.kind == Office.ProposalKind.BUILD) {
-            boolean placed = colony.getServerBuildingManager().getBuildings().values().stream()
-                    .anyMatch(building -> ColonyNeeds.type(building).equals(proposal.building));
-            if (placed) proposal.status = Office.ProposalStatus.DONE;
-            else if (day - proposal.answeredDay > Office.BUILD_DAYS) proposal.status = Office.ProposalStatus.BROKEN;
-            else return false;
+            IBuilding hut = colony.getServerBuildingManager().getBuildings().values().stream()
+                    .filter(building -> ColonyNeeds.type(building).equals(proposal.building))
+                    .max(Comparator.comparingInt(IBuilding::getBuildingLevel)).orElse(null);
+            if (hut == null) {
+                if (day - proposal.answeredDay <= Office.BUILD_DAYS) return false;
+                proposal.status = Office.ProposalStatus.BROKEN;
+            } else if (hut.getBuildingLevel() >= 1) {
+                proposal.status = Office.ProposalStatus.DONE;
+            } else {
+                boolean changed = false;
+                if (proposal.placedDay < 0) {
+                    proposal.placedDay = day;
+                    proposal.pos = hut.getPosition().asLong();
+                    changed = true;
+                }
+                // The player agreed to it being built: once the hut stands, the mayor orders the build.
+                ServerPlayer player = proposal.playerId == null ? null : server.getPlayerList().getPlayer(proposal.playerId);
+                if (player != null && !ColonyNeeds.hasWorkOrder(colony, hut.getPosition())) {
+                    hut.requestUpgrade(player, BlockPos.ZERO);
+                    if (ColonyNeeds.hasWorkOrder(colony, hut.getPosition())) {
+                        TownHall.LOGGER.info("Mayor {} ordered the build of the new {}", mayor.name, proposal.building);
+                    }
+                }
+                if (day - proposal.placedDay <= Office.CONSTRUCTION_DAYS) return changed;
+                archive(mayor, proposal); // still with the builders: part of the record, not waited on any more
+                return true;
+            }
         } else {
             BlockPos pos = BlockPos.of(proposal.pos);
             IBuilding building = colony.getServerBuildingManager().getBuilding(pos);

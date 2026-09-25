@@ -163,7 +163,7 @@ public final class OfficeText {
     public static String outcome(String mayor, Office.Proposal proposal) {
         String text = switch (proposal.status) {
             case DONE -> proposal.kind == Office.ProposalKind.BUILD
-                    ? proposal.player + " kept their word to Mayor " + mayor + " and placed the new " + Office.buildingName(proposal.building) + "."
+                    ? "The new " + Office.buildingName(proposal.building) + " is built, as " + proposal.player + " agreed with Mayor " + mayor + "."
                     : "The " + Office.buildingName(proposal.building) + " was upgraded, as " + proposal.player + " agreed with Mayor " + mayor + ".";
             case BROKEN -> proposal.player + " agreed with Mayor " + mayor + " on day " + proposal.answeredDay + " to "
                     + proposal.what() + ", but never did.";
@@ -180,7 +180,9 @@ public final class OfficeText {
     public static String proposalLine(Office.Proposal proposal) {
         String status = switch (proposal.status) {
             case PENDING -> "waiting for an answer since day " + proposal.madeDay;
-            case ACCEPTED -> proposal.player + " agreed on day " + proposal.answeredDay + "; not done yet";
+            case ACCEPTED -> proposal.placedDay >= 0
+                    ? proposal.player + " agreed and placed the hut on day " + proposal.placedDay + "; the builders are on it"
+                    : proposal.player + " agreed on day " + proposal.answeredDay + "; not done yet";
             case REFUSED -> proposal.player + " turned it down on day " + proposal.answeredDay;
             case IGNORED -> "never answered";
             case DONE -> proposal.player + " agreed; done";
