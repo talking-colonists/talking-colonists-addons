@@ -1,0 +1,14 @@
+{
+  "block.tc_noticeboard.notice_board": "Notice Board",
+  "tc_noticeboard.gui.title": "Notice Board",
+  "tc_noticeboard.gui.empty": "Nothing is pinned yet. Write a title and your notice below, then Post: citizens near the board read it, spread the word, and some pin a reply.",
+  "tc_noticeboard.gui.byline": "Posted by %s on day %s",
+  "tc_noticeboard.gui.replies": "Replies",
+  "tc_noticeboard.gui.no_replies": "No replies yet. Citizens near the board pin theirs over the next few minutes.",
+  "tc_noticeboard.gui.field_title": "Title",
+  "tc_noticeboard.gui.field_text": "Your notice",
+  "tc_noticeboard.gui.post": "Post",
+  "tc_noticeboard.gui.announce": "Announce",
+  "tc_noticeboard.gui.take_down": "Take down",
+  "tc_noticeboard.gui.hint": "Post pins the notice here and replaces the old one. Announce tells every citizen at once, without pinning anything."
+}

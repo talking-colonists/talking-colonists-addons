@@ -1,0 +1,36 @@
+<window xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" size="400 244"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/ldtteam/BlockUI/version/main/src/main/resources/assets/blockui/gui/block_ui.xsd">
+    <image source="minecolonies:textures/gui/builderhut/builder_paper_wide2.png" size="400 244"/>
+
+    <button id="close" size="14 15" pos="375 10" source="minecolonies:textures/gui/button_x.png" textcolor="black" texthovercolor="#8a5a2b"/>
+
+    <text size="400 13" pos="0 13" color="black" textalign="MIDDLE" label="$(tc_noticeboard.gui.title)"/>
+
+    <text id="empty" size="170 50" pos="25 50" color="#555555" textscale="0.8" wrap="true" label="$(tc_noticeboard.gui.empty)"/>
+    <text id="noticeTitle" size="180 10" pos="22 32" color="black"/>
+    <text id="byline" size="180 9" pos="22 43" color="#555555" textscale="0.7"/>
+    <text id="noticeBody" size="180 84" pos="22 54" color="#333333" textscale="0.8" wrap="true"/>
+    <text id="reach" size="180 18" pos="22 140" color="#2f5d2f" textscale="0.7" wrap="true"/>
+
+    <text id="repliesLabel" size="172 10" pos="210 32" color="black" label="$(tc_noticeboard.gui.replies)"/>
+    <text id="noReplies" size="166 40" pos="212 46" color="#555555" textscale="0.7" wrap="true" label="$(tc_noticeboard.gui.no_replies)"/>
+    <list id="replies" size="172 118" pos="208 44">
+        <box size="100% 38" linewidth="1">
+            <text id="who" size="166 9" pos="3 2" color="black" textscale="0.7"/>
+            <text id="text" size="166 26" pos="3 11" color="#333333" textscale="0.65" wrap="true"/>
+        </box>
+    </list>
+
+    <text size="120 8" pos="20 166" color="#555555" textscale="0.7" label="$(tc_noticeboard.gui.field_title)"/>
+    <input id="titleInput" size="120 16" pos="20 175" maxlength="40"/>
+    <text size="234 8" pos="146 166" color="#555555" textscale="0.7" label="$(tc_noticeboard.gui.field_text)"/>
+    <input id="bodyInput" size="234 16" pos="146 175" maxlength="400"/>
+
+    <button id="post" size="86 17" pos="20 197" textcolor="black" texthovercolor="#8a5a2b"
+            source="minecolonies:textures/gui/builderhut/builder_button_medium.png" label="$(tc_noticeboard.gui.post)"/>
+    <button id="announce" size="86 17" pos="112 197" textcolor="black" texthovercolor="#8a5a2b"
+            source="minecolonies:textures/gui/builderhut/builder_button_medium.png" label="$(tc_noticeboard.gui.announce)"/>
+    <button id="takeDown" size="86 17" pos="294 197" textcolor="black" texthovercolor="#8a5a2b"
+            source="minecolonies:textures/gui/builderhut/builder_button_medium.png" label="$(tc_noticeboard.gui.take_down)"/>
+    <text size="360 18" pos="20 217" color="#555555" textscale="0.65" wrap="true" label="$(tc_noticeboard.gui.hint)"/>
+</window>

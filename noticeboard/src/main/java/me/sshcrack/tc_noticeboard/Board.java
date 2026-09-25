@@ -16,6 +16,7 @@ import me.sshcrack.mc_talking.api.memory.BroadcastSource;
 import me.sshcrack.mc_talking.api.memory.CitizenMemoryService;
 import me.sshcrack.mc_talking.api.text.CitizenTextService;
 import me.sshcrack.mc_talking.api.text.TextRequest;
+import me.sshcrack.tc_noticeboard.block.NoticeBoardBlockEntity;
 import me.sshcrack.tc_noticeboard.shared.book.BookText;
 import me.sshcrack.tc_noticeboard.shared.book.WrittenBooks;
 import me.sshcrack.tc_noticeboard.shared.provider.TextCapacity;
@@ -27,6 +28,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.LecternBlockEntity;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -41,10 +43,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Notices: a signed book on a lectern inside a colony. Posting tells the citizens near the board, who
- * spread it; a few minutes later up to {@link #MAX_REPLIES} of them write short replies, which are
- * pinned into the book as extra pages. Also the town bell: ringing it with a signed book tells the
- * whole colony at once. Server thread only.
+ * Notices: typed in a Notice Board block's window, or a signed book put on a lectern, inside a colony.
+ * Posting tells the citizens near the board, who spread it; a few minutes later up to
+ * {@link #MAX_REPLIES} of them write short replies, pinned on the board as they come (or into the
+ * lectern's book as extra pages at the end). Also announcements: from the board's window, or by ringing
+ * a bell with a signed book, the whole colony hears it at once. Server thread only.
  */
 public final class Board {
     static final int MAX_REPLIES = 3;
@@ -69,6 +72,8 @@ public final class Board {
         public List<Integer> replied = new ArrayList<>();
         public List<String> replies = new ArrayList<>();
         public int failures;
+        /** Pinned on a Notice Board block rather than a lectern. */
+        public boolean onBoard;
         transient boolean writing;
     }
 
@@ -82,14 +87,17 @@ public final class Board {
         final String title;
         final UUID posterId;
         final long until;
+        /** The Notice Board block showing the reach, or null for a lectern. */
+        final @Nullable BlockPos board;
         int milestone;
 
-        ReachWatch(String colonyKey, String broadcastId, String title, UUID posterId, long until) {
+        ReachWatch(String colonyKey, String broadcastId, String title, UUID posterId, long until, @Nullable BlockPos board) {
             this.colonyKey = colonyKey;
             this.broadcastId = broadcastId;
             this.title = title;
             this.posterId = posterId;
             this.until = until;
+            this.board = board;
         }
     }
 
@@ -121,9 +129,55 @@ public final class Board {
         BookText text = BookText.read(lectern.getBook());
         IColony colony = IColonyManager.getInstance().getIColony(level, pos);
         if (text == null || colony == null || !colony.getPermissions().isColonyMember(player)) return false;
+        return publish(player, colony, level, pos, text.title(), text.body(), false) != null;
+    }
+
+    /**
+     * Posts a notice typed in the window of the Notice Board block at {@code pos} and pins it there,
+     * replacing what hung there before. Tells the player the outcome. Returns whether it was posted.
+     */
+    public boolean postOnBoard(ServerPlayer player, ServerLevel level, BlockPos pos, String title, String body) {
+        if (!(level.getBlockEntity(pos) instanceof NoticeBoardBlockEntity entity)) return false;
+        IColony colony = memberColony(player, level, pos);
+        if (colony == null) return false;
+        if (title.isBlank() || body.isBlank()) {
+            tell(player, "A notice needs a title and some text.");
+            return false;
+        }
+        Notice notice = publish(player, colony, level, pos, title.strip(), body.strip(), true);
+        if (notice == null) return false;
+        entity.pin(notice.id.toString(), notice.title, notice.body, notice.posterName, colony.getDay());
+        return true;
+    }
+
+    /** Takes the notice and its replies off the Notice Board block at {@code pos}. */
+    public void takeDown(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        if (!(level.getBlockEntity(pos) instanceof NoticeBoardBlockEntity entity) || memberColony(player, level, pos) == null) return;
+        entity.takeDown();
+        notices.removeIf(notice -> notice.onBoard && notice.pos.equals(pos));
+        reach.removeIf(watch -> pos.equals(watch.board));
+        save();
+    }
+
+    /** The colony at {@code pos} if the player is a member of it; otherwise tells them why not. */
+    private static @Nullable IColony memberColony(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        IColony colony = IColonyManager.getInstance().getIColony(level, pos);
+        if (colony == null) {
+            tell(player, "Place the notice board inside your colony.");
+            return null;
+        }
+        if (!colony.getPermissions().isColonyMember(player)) {
+            tell(player, "Only members of " + colony.getName() + " can use its notice board.");
+            return null;
+        }
+        return colony;
+    }
+
+    private @Nullable Notice publish(ServerPlayer player, IColony colony, ServerLevel level, BlockPos pos, String title, String body,
+            boolean onBoard) {
         notices.removeIf(notice -> notice.pos.equals(pos) && notice.colonyKey.equals(key(colony)));
 
-        String message = NoticeText.broadcast(text.title(), text.body());
+        String message = NoticeText.broadcast(title, body);
         BroadcastSource source = BroadcastSource.block(pos, NoticeText.SOURCE_NAME);
         BroadcastPublishResult result = CitizenMemoryService.publishBroadcast(colony,
                 BroadcastRequest.fromPosition(source, message, pos).withExpiry(NOTICE_LIFETIME));
@@ -142,22 +196,23 @@ public final class Board {
                 case NO_RECIPIENTS -> "No citizen is around to read the notice yet.";
                 default -> "The notice could not be posted.";
             });
-            return false;
+            return null;
         }
         Notice notice = new Notice();
         notice.colonyKey = key(colony);
         notice.pos = pos.immutable();
-        notice.title = text.title();
-        notice.body = text.body();
+        notice.title = title;
+        notice.body = body;
+        notice.onBoard = onBoard;
         notice.posterId = player.getUUID();
         notice.posterName = player.getGameProfile().getName();
         notice.repliesDue = now() + REPLY_DELAY_TICKS + level.getRandom().nextInt((int) REPLY_SPREAD_TICKS);
         notices.add(notice);
         save();
-        watchReach(colony, result, text.title(), player.getUUID());
-        tell(player, "Posted \"" + text.title() + "\". Citizens near the board read it and spread the word; "
-                + "replies get pinned into the book in a few minutes.");
-        return true;
+        watchReach(colony, result, title, player.getUUID(), onBoard ? notice.pos : null);
+        tell(player, "Posted \"" + title + "\". Citizens near the board read it and spread the word; "
+                + (onBoard ? "their replies get pinned under it over the next minutes." : "replies get pinned into the book in a few minutes."));
+        return notice;
     }
 
     /** Every citizen of the colony hears the message now, attributed to the player. */
@@ -174,25 +229,51 @@ public final class Board {
         BookText text = BookText.read(book);
         IColony colony = IColonyManager.getInstance().getIColony(level, bell);
         if (text == null || colony == null || !colony.getPermissions().isColonyMember(player)) return false;
-        BroadcastPublishResult result = announce(player, colony, NoticeText.announcement(text.title(), text.body()));
+        return announce(player, colony, text.title(), text.body(), "The bell rings out");
+    }
+
+    /** "Announce" in the notice board window: the whole colony hears it at once; nothing is pinned. */
+    public boolean announceFromBoard(ServerPlayer player, ServerLevel level, BlockPos pos, String title, String body) {
+        IColony colony = memberColony(player, level, pos);
+        if (colony == null) return false;
+        if (title.isBlank() && body.isBlank()) {
+            tell(player, "Write what the colony should hear first.");
+            return false;
+        }
+        return announce(player, colony, title.strip(), body.strip(), "You announce");
+    }
+
+    private boolean announce(ServerPlayer player, IColony colony, String title, String body, String verb) {
+        BroadcastPublishResult result = announce(player, colony, NoticeText.announcement(title, body));
         tell(player, switch (result.status()) {
-            case PUBLISHED -> "The bell rings out \"" + text.title() + "\": " + result.recipients()
+            case PUBLISHED -> verb + " \"" + title + "\": " + result.recipients()
                     + " citizens of " + colony.getName() + " heard it.";
-            case RATE_LIMITED -> "The colony has had a lot of news lately; ring again in a while.";
+            case RATE_LIMITED -> "The colony has had a lot of news lately; try again in a while.";
             case DISABLED -> "Broadcasts are turned off on this server.";
-            default -> "Nobody was there to hear the bell.";
+            default -> "Nobody was there to hear it.";
         });
         return result.isPublished();
     }
 
-    private void watchReach(IColony colony, BroadcastPublishResult result, String title, UUID posterId) {
+    private void watchReach(IColony colony, BroadcastPublishResult result, String title, UUID posterId, @Nullable BlockPos board) {
         if (result.broadcastId() == null || !TalkingColonistsApi.supports(ApiFeature.BROADCAST_REACH)) return;
-        reach.removeIf(watch -> watch.colonyKey.equals(key(colony)) && watch.title.equals(title));
+        reach.removeIf(watch -> watch.colonyKey.equals(key(colony)) && (watch.title.equals(title) || board != null && board.equals(watch.board)));
         ReachWatch watch = new ReachWatch(key(colony), result.broadcastId(), title, posterId,
-                now() + NOTICE_LIFETIME.toSeconds() * 20);
+                now() + NOTICE_LIFETIME.toSeconds() * 20, board);
         // Only news from here on: a notice read by most of a small colony right away starts at half.
-        watch.milestone = currentReach(watch).map(r -> NoticeText.reachMilestone(r.heard(), r.citizens())).orElse(0);
-        if (watch.milestone < 2) reach.add(watch);
+        Optional<BroadcastReach> now = currentReach(watch);
+        watch.milestone = now.map(r -> NoticeText.reachMilestone(r.heard(), r.citizens())).orElse(0);
+        now.ifPresent(r -> showReach(watch, r));
+        if (watch.milestone < 2 || board != null) reach.add(watch);
+    }
+
+    /** Writes how far the word has spread onto the watch's Notice Board block, if it is loaded. */
+    private void showReach(ReachWatch watch, BroadcastReach current) {
+        IColony colony = colony(watch.colonyKey);
+        if (watch.board == null || colony == null || !colony.getWorld().isLoaded(watch.board)) return;
+        if (colony.getWorld().getBlockEntity(watch.board) instanceof NoticeBoardBlockEntity entity && entity.title().equals(watch.title)) {
+            entity.setReach(NoticeText.reach(watch.title, current.heard(), current.citizens()));
+        }
     }
 
     private Optional<BroadcastReach> currentReach(ReachWatch watch) {
@@ -207,7 +288,9 @@ public final class Board {
                 reach.remove(watch); // retracted, expired, or the colony is gone
                 continue;
             }
+            showReach(watch, current.get());
             int milestone = NoticeText.reachMilestone(current.get().heard(), current.get().citizens());
+            if (milestone == 2 && watch.board != null) reach.remove(watch);
             if (milestone <= watch.milestone) continue;
             watch.milestone = milestone;
             if (milestone == 2) reach.remove(watch);
@@ -233,17 +316,25 @@ public final class Board {
     private void collectReply(Notice notice) {
         IColony colony = colony(notice.colonyKey);
         ServerLevel level = colony == null || !(colony.getWorld() instanceof ServerLevel world) ? null : world;
-        LecternBlockEntity lectern = level != null && level.isLoaded(notice.pos)
-                && level.getBlockEntity(notice.pos) instanceof LecternBlockEntity found ? found : null;
         if (colony == null || level == null) {
             drop(notice);
             return;
         }
-        if (lectern == null) return; // unloaded: try again later
-        BookText text = lectern.hasBook() ? BookText.read(lectern.getBook()) : null;
-        if (text == null || !text.title().equals(notice.title)) {
-            drop(notice); // the notice was taken down
-            return;
+        if (!level.isLoaded(notice.pos)) return; // try again later
+        BlockEntity found = level.getBlockEntity(notice.pos);
+        LecternBlockEntity lectern = null;
+        if (notice.onBoard) {
+            if (!(found instanceof NoticeBoardBlockEntity board) || !board.shows(notice.id.toString())) {
+                drop(notice); // the notice was taken down, or the board broken
+                return;
+            }
+        } else {
+            lectern = found instanceof LecternBlockEntity entity ? entity : null;
+            BookText text = lectern != null && lectern.hasBook() ? BookText.read(lectern.getBook()) : null;
+            if (text == null || !text.title().equals(notice.title)) {
+                drop(notice); // the notice was taken down
+                return;
+            }
         }
         List<AbstractEntityCitizen> candidates = repliers(colony, level, notice.pos, notice.replied);
         if (notice.replies.size() >= MAX_REPLIES || candidates.isEmpty() || notice.failures >= MAX_FAILURES) {
@@ -260,7 +351,12 @@ public final class Board {
         CitizenTextService.generate(replier, request).whenComplete((result, error) -> server.execute(() -> {
             notice.writing = false;
             if (error == null && result.isSuccess() && !result.text().isBlank()) {
-                notice.replies.add(NoticeText.replyPage(data.getName(), role(data), NoticeText.cleanReply(result.text())));
+                String reply = NoticeText.cleanReply(result.text());
+                notice.replies.add(NoticeText.replyPage(data.getName(), role(data), reply));
+                if (notice.onBoard && level.isLoaded(notice.pos) && level.getBlockEntity(notice.pos) instanceof NoticeBoardBlockEntity board
+                        && board.shows(notice.id.toString())) {
+                    board.addReply(new NoticeBoardBlockEntity.Reply(data.getName(), role(data), reply));
+                }
             } else {
                 notice.failures++;
                 NoticeBoard.LOGGER.warn("A reply to notice \"{}\" failed: {}", notice.title,
@@ -270,22 +366,24 @@ public final class Board {
         }));
     }
 
-    /** Pins the replies into the book and tells the poster. */
-    private void finish(Notice notice, LecternBlockEntity lectern) {
+    /** Pins the replies into the lectern's book (a board already shows them) and tells the poster. */
+    private void finish(Notice notice, @Nullable LecternBlockEntity lectern) {
         notices.remove(notice);
         save();
         if (notice.replies.isEmpty()) return;
-        ItemStack book = lectern.getBook();
-        List<Component> pages = new ArrayList<>();
-        for (String reply : notice.replies) {
-            pages.add(Component.literal(reply));
+        if (lectern != null) {
+            ItemStack book = lectern.getBook();
+            List<Component> pages = new ArrayList<>();
+            for (String reply : notice.replies) {
+                pages.add(Component.literal(reply));
+            }
+            WrittenBooks.appendPages(book, pages);
+            // The lectern caches the page count from when the book was placed; hand the book back so
+            // readers can turn to the new pages.
+            lectern.setBook(book);
         }
-        WrittenBooks.appendPages(book, pages);
-        // The lectern caches the page count from when the book was placed; hand the book back so
-        // readers can turn to the new pages.
-        lectern.setBook(book);
         String summary = notice.replies.size() + (notice.replies.size() == 1 ? " citizen" : " citizens")
-                + " pinned a reply to \"" + notice.title + "\". Read them on the lectern.";
+                + " pinned a reply to \"" + notice.title + "\". Read them on the " + (lectern != null ? "lectern." : "notice board.");
         ReachWatch watch = reach.stream().filter(w -> w.colonyKey.equals(notice.colonyKey) && w.title.equals(notice.title))
                 .findFirst().orElse(null);
         BroadcastReach spread = watch == null ? null : currentReach(watch).orElse(null);
@@ -357,6 +455,7 @@ public final class Board {
                 json.getAsJsonArray("replied").forEach(id -> notice.replied.add(id.getAsInt()));
                 json.getAsJsonArray("replies").forEach(reply -> notice.replies.add(reply.getAsString()));
                 notice.failures = json.get("failures").getAsInt();
+                notice.onBoard = json.has("onBoard") && json.get("onBoard").getAsBoolean();
                 notices.add(notice);
             }
         } catch (IOException | RuntimeException e) {
@@ -383,6 +482,7 @@ public final class Board {
             notice.replies.forEach(replies::add);
             json.add("replies", replies);
             json.addProperty("failures", notice.failures);
+            json.addProperty("onBoard", notice.onBoard);
             array.add(json);
         }
         JsonObject root = new JsonObject();
