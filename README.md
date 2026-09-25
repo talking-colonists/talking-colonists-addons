@@ -18,6 +18,8 @@ Every addon builds for **1.21.1 NeoForge** and **1.20.1 Forge** from one source 
 
 ## Colony Gazette
 
+Full guide: [docs/addons/gazette.md](docs/addons/gazette.md).
+
 Every morning (in-game time 1000) the colony's teacher writes a newspaper about the previous day:
 raids, births and deaths, new hires and job changes, buildings built or upgraded, and anything other
 addons record as colony events. Without a teacher, a student in the library writes it, and without
@@ -33,6 +35,8 @@ the key's quota is used up or all background slots are busy; the gazette retries
 
 ## Campfire Nights
 
+Full guide: [docs/addons/campfire.md](docs/addons/campfire.md).
+
 At dusk (in-game time 12000 to 13500), if a player is near a lit campfire inside a colony, three to
 five idle citizens walk over, sit around it and take turns telling stories: memories, colony news or
 tales from before they came. It is a real Gemini Live group conversation, so you hear them talk. Chat
@@ -43,6 +47,8 @@ news, so the Gazette may report it.
 - `/campfire start` (operators) starts one at the nearest campfire right away; `/campfire stop` ends it.
 
 ## Postal Service
+
+Full guide: [docs/addons/postal.md](docs/addons/postal.md).
 
 Write a letter in a book and quill and sign it with the recipient's name as the title ("Anna",
 "Dear Anna Smith" and "To: Anna" all work). Right-click the colony's courier with it, or the
@@ -59,6 +65,8 @@ when you talk. The recipient has to be loaded to write back; letters wait for th
 undelivered after three in-game days or if the citizen left the colony.
 
 ## Tavern Recruiter
+
+Full guide: [docs/addons/tavern.md](docs/addons/tavern.md).
 
 MineColonies visitors at the tavern can now be talked to like citizens. Each one knows what joining
 costs and may haggle: make a good case (a job that suits them, kindness, a fair offer) and they lower
