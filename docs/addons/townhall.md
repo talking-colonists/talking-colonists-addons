@@ -28,6 +28,8 @@ The box shows the phase: a campaign poster while candidates campaign, a flag whi
   your slogan, the text your platform.
 - If you are the only candidate, the unhappiest citizen stands against you, with a platform built
   from the colony's real problems, so you can lose.
+- A citizen who stands (a rival, or the sitting mayor seeking re-election) walks up to you with a
+  campaign pamphlet and gives their speech aloud. The whole colony hears what they said.
 - A new election can be called three days after the last one.
 
 ## The mayor

@@ -169,7 +169,7 @@ public class TownHall {
                         "Craft a Suggestion Box (paper over a chest over a log): each morning unhappy citizens drop notes in it."),
                 List.of(
                         "Right-clicking the Town Hall block with a signed book also works: the title is your slogan, the text your platform.",
-                        "If you are the only candidate, the unhappiest citizen stands against you, so you can lose.",
+                        "If you are the only candidate, the unhappiest citizen stands against you, so you can lose. They bring you their campaign pamphlet and give their speech aloud.",
                         "A new election can be called three days after the last one. A sitting citizen mayor stands for re-election, and voters judge the promises and how you answered the mayor.",
                         "Agreeing to an upgrade places the builder's work order. Agreeing to a new hut is a promise: place it within three days.",
                         "Operators: /townhall rush ends campaigns now, /townhall notes has citizens write notes now, /townhall report has the mayor report now."));

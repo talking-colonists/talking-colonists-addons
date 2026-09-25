@@ -85,6 +85,34 @@ public final class ElectionText {
                 + "change for the colony, grounded in the real problems and wishes you know about. Plain text only.";
     }
 
+    /**
+     * What a citizen candidate is asked to say aloud as their campaign speech. {@code listener} is the
+     * player they walked up to, or null when they speak where they stand.
+     */
+    public static String rivalSpeech(String colonyName, String slogan, String platform, List<String> opponents,
+                                     boolean incumbent, @Nullable String listener) {
+        String who = listener == null ? "everyone around you" : listener + " and everyone around you";
+        return "You stand for mayor of " + colonyName + " against " + join(opponents) + (incumbent
+                ? ", as the sitting mayor seeking re-election." : ".")
+                + " Your slogan: \"" + slogan.strip() + "\". Your platform: " + platform.strip().replaceAll("\\s+", " ")
+                + (listener == null ? "" : " You just handed " + listener + " your campaign pamphlet.")
+                + "\nNow give your campaign speech aloud to " + who + ": 3 to 5 sentences in your own voice and manner. "
+                + "Say why you stand and what you will do, "
+                + (incumbent ? "stand by what you did in office, " : "")
+                + "and ask for their vote. Be persuasive but fair: never insult your opponents.";
+    }
+
+    /** A spoken line without the "Name: " the transcript may start with. */
+    public static String withoutSpeaker(String name, String transcript) {
+        String text = transcript.strip();
+        return text.startsWith(name + ":") ? text.substring(name.length() + 1).strip() : text;
+    }
+
+    /** The campaign pamphlet a citizen candidate hands over: slogan, platform and name. */
+    public static String pamphlet(String name, String slogan, String platform) {
+        return "\"" + slogan.strip() + "\"\n\n" + platform.strip() + "\n\nVote " + name + " for mayor!";
+    }
+
     public static JsonObject rivalSchema() {
         JsonObject properties = new JsonObject();
         properties.add("slogan", string("Your campaign slogan, at most 8 words"));
