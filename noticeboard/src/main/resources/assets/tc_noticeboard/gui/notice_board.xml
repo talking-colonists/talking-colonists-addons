@@ -2,7 +2,7 @@
         xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/ldtteam/BlockUI/version/main/src/main/resources/assets/blockui/gui/block_ui.xsd">
     <image source="minecolonies:textures/gui/builderhut/builder_paper_wide2.png" size="400 244"/>
 
-    <button id="close" size="14 15" pos="375 10" source="minecolonies:textures/gui/button_x.png" textcolor="black"/>
+    <button id="close" size="14 15" pos="375 10" source="minecolonies:textures/gui/button_x.png" textcolor="black" texthovercolor="#8a5a2b"/>
 
     <text size="400 13" pos="0 13" color="black" textalign="MIDDLE" label="$(tc_noticeboard.gui.title)"/>
 
@@ -26,11 +26,11 @@
     <text size="234 8" pos="146 166" color="#555555" textscale="0.7" label="$(tc_noticeboard.gui.field_text)"/>
     <input id="bodyInput" size="234 16" pos="146 175" maxlength="400"/>
 
-    <button id="post" size="86 17" pos="20 197" textcolor="black"
+    <button id="post" size="86 17" pos="20 197" textcolor="black" texthovercolor="#8a5a2b"
             source="minecolonies:textures/gui/builderhut/builder_button_medium.png" label="$(tc_noticeboard.gui.post)"/>
-    <button id="announce" size="86 17" pos="112 197" textcolor="black"
+    <button id="announce" size="86 17" pos="112 197" textcolor="black" texthovercolor="#8a5a2b"
             source="minecolonies:textures/gui/builderhut/builder_button_medium.png" label="$(tc_noticeboard.gui.announce)"/>
-    <button id="takeDown" size="86 17" pos="294 197" textcolor="black"
+    <button id="takeDown" size="86 17" pos="294 197" textcolor="black" texthovercolor="#8a5a2b"
             source="minecolonies:textures/gui/builderhut/builder_button_medium.png" label="$(tc_noticeboard.gui.take_down)"/>
     <text size="360 18" pos="20 217" color="#555555" textscale="0.65" wrap="true" label="$(tc_noticeboard.gui.hint)"/>
 </window>
