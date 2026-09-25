@@ -10,7 +10,9 @@ import me.sshcrack.mc_talking.api.colony.ColonyEventService;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import me.sshcrack.tc_playtest.shared.book.WrittenBooks;
@@ -116,18 +118,24 @@ final class PlaytestCommand {
         return 1;
     }
 
-    /** A campaign book to stand for mayor with, and a barrel for the suggestion box. */
+    /** A campaign book to stand for mayor with, a Ballot Box and a Suggestion Box. */
     private static int townHall(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         ItemStack campaign = WrittenBooks.create("Walls before winter", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
                 List.of(Component.literal("I will build a wall around the colony before winter, hire two guards, and open "
                         + "a bakery so nobody goes hungry.")));
-        for (ItemStack stack : List.of(campaign, new ItemStack(Items.BARREL))) {
+        for (ItemStack stack : List.of(campaign, addonItem("tc_townhall:ballot_box"), addonItem("tc_townhall:suggestion_box"))) {
+            if (stack.isEmpty()) continue;
             if (!player.getInventory().add(stack)) player.drop(stack, false);
         }
-        context.getSource().sendSuccess(() -> Component.literal("[Playtest] Right-click the Town Hall block holding \"Walls before winter\" "
-                + "to stand for mayor, then speak for up to 30 s. Place the barrel within 4 blocks of the Town Hall block: it becomes the suggestion box."), false);
+        context.getSource().sendSuccess(() -> Component.literal("[Playtest] Place the Ballot Box in your colony and right-click it: stand for mayor "
+                + "there (or right-click the Town Hall block holding \"Walls before winter\"), then speak for up to 30 s. "
+                + "Place the Suggestion Box anywhere in the colony and right-click it to read the notes."), false);
         return 1;
+    }
+
+    private static ItemStack addonItem(String id) {
+        return new ItemStack(BuiltInRegistries.ITEM.getOptional(ResourceLocation.tryParse(id)).orElse(Items.AIR));
     }
 
     private static IColony colony(ServerPlayer player) {

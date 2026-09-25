@@ -176,7 +176,8 @@ dependencies {
     modRuntimeOnly("com.ldtteam:domum_ornamentum:${prop("deps.domum_version")}:universal")
     // Compile-visible because MineColonies hut blocks extend Structurize types (the playtest places huts).
     modImplementation("com.ldtteam:structurize:${prop("deps.structurize_version")}")
-    modRuntimeOnly("com.ldtteam:blockui:${prop("deps.blockui_version")}")
+    // Compile-visible for the MineColonies-style windows (BlockUI ships with MineColonies).
+    modImplementation("com.ldtteam:blockui:${prop("deps.blockui_version")}")
 }
 
 sourceSets {

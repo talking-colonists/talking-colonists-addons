@@ -3,10 +3,10 @@ package me.sshcrack.tc_townhall;
 import com.minecolonies.api.colony.ICitizenData;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.IColonyManager;
-import com.minecolonies.api.colony.buildings.workerbuildings.ITownHall;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import me.sshcrack.mc_talking.api.text.CitizenTextService;
 import me.sshcrack.mc_talking.api.text.TextRequest;
+import me.sshcrack.tc_townhall.block.SuggestionBoxBlockEntity;
 import me.sshcrack.tc_townhall.shared.book.WrittenBooks;
 import me.sshcrack.tc_townhall.shared.provider.TextCapacity;
 import net.minecraft.core.BlockPos;
@@ -15,8 +15,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.entity.BarrelBlockEntity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Comparator;
@@ -27,15 +25,14 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * The suggestion box: a barrel next to the colony's Town Hall block. Every morning up to
- * {@link #MAX_WRITERS} of the least happy grown citizens drop a short signed note in it, one real
- * concern or wish each, in their own voice. The player reads them by opening the barrel. At most
- * {@link #MAX_NOTES} notes wait in the box. Not saved: a restart at worst skips one morning.
+ * The suggestion box: a Suggestion Box block anywhere in the colony. Every morning up to
+ * {@link #MAX_WRITERS} of the least happy grown citizens drop a short note in it, one real concern or
+ * wish each, in their own voice. The player reads them in the box's window, and may take one along as a
+ * one-page book. At most {@link SuggestionBoxBlockEntity#MAX_NOTES} notes wait. Which morning was last
+ * collected is not saved: a restart at worst lets citizens write twice that day.
  */
 public final class SuggestionBox {
-    static final int RANGE = 4;
     static final int MAX_WRITERS = 3;
-    static final int MAX_NOTES = 6;
     /** Only citizens below this happiness (0 to 10) write; content citizens have nothing to post. */
     static final double WRITE_BELOW_HAPPINESS = 7.5;
     /** Mornings: the first tenth of the day. */
@@ -59,7 +56,7 @@ public final class SuggestionBox {
             if (!(colony.getWorld() instanceof ServerLevel level) || level.getDayTime() % 24_000 > MORNING_END) continue;
             String key = Elections.key(colony);
             if (lastDay.getOrDefault(key, -1) == colony.getDay()) continue;
-            BarrelBlockEntity box = find(colony, level);
+            SuggestionBoxBlockEntity box = find(colony, level);
             if (box == null) continue;
             if (!TextCapacity.hasSpare()) continue; // try again later this morning
             lastDay.put(key, colony.getDay());
@@ -70,32 +67,24 @@ public final class SuggestionBox {
     /** Operators and the self-test: citizens write their notes now, whatever the time of day. */
     public void rush(IColony colony) {
         if (!(colony.getWorld() instanceof ServerLevel level)) return;
-        BarrelBlockEntity box = find(colony, level);
+        SuggestionBoxBlockEntity box = find(colony, level);
         if (box == null) return;
         lastDay.put(Elections.key(colony), colony.getDay());
         collect(colony, box);
     }
 
-    /** The barrel nearest to the colony's Town Hall block, within {@link #RANGE}; null when there is none. */
-    public static @Nullable BarrelBlockEntity find(IColony colony, ServerLevel level) {
-        ITownHall townHall = colony.getServerBuildingManager().getTownHall();
-        if (townHall == null) return null;
-        BlockPos center = townHall.getPosition();
-        BarrelBlockEntity best = null;
-        double bestDistance = Double.MAX_VALUE;
-        for (BlockPos pos : BlockPos.betweenClosed(center.offset(-RANGE, -RANGE, -RANGE), center.offset(RANGE, RANGE, RANGE))) {
-            if (!level.isLoaded(pos) || !(level.getBlockEntity(pos) instanceof BarrelBlockEntity barrel)) continue;
-            double distance = pos.distSqr(center);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = barrel;
-            }
+    /** A loaded Suggestion Box inside the colony, the one with the most room; null when there is none. */
+    public static @Nullable SuggestionBoxBlockEntity find(IColony colony, ServerLevel level) {
+        SuggestionBoxBlockEntity best = null;
+        for (SuggestionBoxBlockEntity box : SuggestionBoxBlockEntity.loaded()) {
+            if (box.getLevel() != level || !colony.isCoordInColony(level, box.getBlockPos())) continue;
+            if (best == null || box.notes().size() < best.notes().size()) best = box;
         }
         return best;
     }
 
-    private void collect(IColony colony, BarrelBlockEntity box) {
-        int room = MAX_NOTES - notes(box);
+    private void collect(IColony colony, SuggestionBoxBlockEntity box) {
+        int room = SuggestionBoxBlockEntity.MAX_NOTES - box.notes().size();
         if (room <= 0) return;
         List<ICitizenData> writers = colony.getCitizenManager().getCitizens().stream()
                 .filter(data -> !data.isChild() && data.getEntity().isPresent() && !writing.contains(data.getId()))
@@ -108,7 +97,7 @@ public final class SuggestionBox {
         }
     }
 
-    private void write(IColony colony, BarrelBlockEntity box, ICitizenData writer) {
+    private void write(IColony colony, SuggestionBoxBlockEntity box, ICitizenData writer) {
         AbstractEntityCitizen entity = writer.getEntity().orElse(null);
         if (entity == null || !TextCapacity.hasSpare()) return;
         writing.add(writer.getId());
@@ -122,35 +111,24 @@ public final class SuggestionBox {
                         error != null ? error.toString() : result.status() + " " + result.detail());
                 return;
             }
-            if (box.isRemoved() || notes(box) >= MAX_NOTES || !drop(box, note(writer.getName(), note))) return;
-            tellMembersNear(colony, writer.getName() + " dropped a note in the suggestion box at the town hall.");
+            if (box.isRemoved() || box.isFull()) return;
+            box.add(new SuggestionBoxBlockEntity.Note(writer.getName(), role(writer), colony.getDay(), note));
+            tellMembersNear(colony, writer.getName() + " dropped a note in the suggestion box.");
         }));
     }
 
-    static ItemStack note(String writer, String text) {
+    /** A note taken from the box, as a one-page signed book. */
+    public static ItemStack note(String writer, String text) {
         return WrittenBooks.create(ElectionText.cut(NOTE_TITLE_PREFIX + writer, 32), writer, WrittenBooks.ORIGINAL,
                 List.of(Component.literal(text)));
     }
 
-    /** Notes already waiting in the box. */
-    static int notes(BarrelBlockEntity box) {
-        int count = 0;
-        for (int slot = 0; slot < box.getContainerSize(); slot++) {
-            ItemStack stack = box.getItem(slot);
-            if (stack.is(Items.WRITTEN_BOOK) && stack.getHoverName().getString().startsWith(NOTE_TITLE_PREFIX)) count++;
+    private static String role(ICitizenData data) {
+        try {
+            return data.getJob() == null ? "" : data.getJob().getJobRegistryEntry().getKey().getPath().replace('_', ' ');
+        } catch (RuntimeException e) {
+            return "";
         }
-        return count;
-    }
-
-    private static boolean drop(BarrelBlockEntity box, ItemStack note) {
-        for (int slot = 0; slot < box.getContainerSize(); slot++) {
-            if (box.getItem(slot).isEmpty()) {
-                box.setItem(slot, note);
-                box.setChanged();
-                return true;
-            }
-        }
-        return false;
     }
 
     private static double happiness(IColony colony, ICitizenData data) {

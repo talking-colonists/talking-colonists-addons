@@ -1,0 +1,49 @@
+{
+  "variants": {
+    "facing=north,phase=idle": {
+      "model": "tc_townhall:block/ballot_box"
+    },
+    "facing=north,phase=campaign": {
+      "model": "tc_townhall:block/ballot_box_campaign"
+    },
+    "facing=north,phase=voting": {
+      "model": "tc_townhall:block/ballot_box_voting"
+    },
+    "facing=east,phase=idle": {
+      "model": "tc_townhall:block/ballot_box",
+      "y": 90
+    },
+    "facing=east,phase=campaign": {
+      "model": "tc_townhall:block/ballot_box_campaign",
+      "y": 90
+    },
+    "facing=east,phase=voting": {
+      "model": "tc_townhall:block/ballot_box_voting",
+      "y": 90
+    },
+    "facing=south,phase=idle": {
+      "model": "tc_townhall:block/ballot_box",
+      "y": 180
+    },
+    "facing=south,phase=campaign": {
+      "model": "tc_townhall:block/ballot_box_campaign",
+      "y": 180
+    },
+    "facing=south,phase=voting": {
+      "model": "tc_townhall:block/ballot_box_voting",
+      "y": 180
+    },
+    "facing=west,phase=idle": {
+      "model": "tc_townhall:block/ballot_box",
+      "y": 270
+    },
+    "facing=west,phase=campaign": {
+      "model": "tc_townhall:block/ballot_box_campaign",
+      "y": 270
+    },
+    "facing=west,phase=voting": {
+      "model": "tc_townhall:block/ballot_box_voting",
+      "y": 270
+    }
+  }
+}

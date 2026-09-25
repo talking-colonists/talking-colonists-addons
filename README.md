@@ -91,10 +91,16 @@ a town crier (the bell rings as usual).
 
 ## Town Hall
 
-Right-click your colony's Town Hall block while holding a signed book: you stand for mayor, with the
-book's title as your slogan and its text as your platform. With Simple Voice Chat you then have 30
-seconds to give a speech. Citizens at the town hall hear it and pass it on, so every citizen votes on
-what actually reached them, and on how they feel about you after your conversations.
+Full guide: [docs/addons/townhall.md](docs/addons/townhall.md).
+
+Craft a Ballot Box (spruce planks around paper and an iron ingot), place it in your colony and
+right-click it. Its window shows the candidates with their slogans and plans, and lets you stand for
+mayor: type a slogan and what you will do. (Right-clicking the Town Hall block with a signed book works
+too: the title is the slogan, the text the platform.) With Simple Voice Chat you then have 30 seconds
+to give a speech, and you can speak again during the campaign. Citizens nearby hear it and pass it on,
+so every citizen votes on what actually reached them, and on how they feel about you after your
+conversations. While citizens vote, the window fills with a live tally and each voter's reason. The box
+shows the phase: a poster during the campaign, a flag while voting is open.
 
 The campaign lasts one Minecraft day. If you're the only candidate, the unhappiest citizen stands
 against you, with a platform built from the colony's real problems, so you can lose. Then every grown
@@ -102,8 +108,10 @@ citizen votes in character. The whole colony hears the result, a citizen brings 
 with a few voters' reasons, and the mayor is part of what citizens know from then on. A new election
 can be called three days later.
 
-Place a barrel within 4 blocks of the Town Hall block and it becomes the suggestion box: every morning
-up to three unhappy citizens drop a one-page note with a real concern or wish (at most 6 wait in it).
+Craft a Suggestion Box (paper over a chest over a log) and place it anywhere in the colony: every morning
+up to three unhappy citizens drop a short note with a real concern or wish (at most 6 wait in it). A
+paper sticks out of the slot while notes wait; right-click it to read them, take one along as a
+one-page book, or throw it away.
 
 - Operators: `/townhall rush` ends running campaigns now; `/townhall notes` has citizens write notes now.
 

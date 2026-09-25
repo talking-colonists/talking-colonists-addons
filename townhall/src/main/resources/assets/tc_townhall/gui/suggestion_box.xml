@@ -1,0 +1,25 @@
+<window xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" size="400 244"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/ldtteam/BlockUI/version/main/src/main/resources/assets/blockui/gui/block_ui.xsd">
+    <image source="minecolonies:textures/gui/builderhut/builder_paper_wide2.png" size="400 244"/>
+
+    <button id="close" size="14 15" pos="375 10" source="minecolonies:textures/gui/button_x.png" textcolor="black"/>
+
+    <text size="400 13" pos="0 14" color="black" textalign="MIDDLE" label="$(tc_townhall.gui.suggestion_box.title)"/>
+    <text size="330 11" pos="35 28" color="#555555" textscale="0.8" textalign="MIDDLE" label="$(tc_townhall.gui.suggestion_box.hint)"/>
+
+    <text id="empty" size="320 40" pos="40 100" color="black" textalign="MIDDLE" wrap="true" label="$(tc_townhall.gui.suggestion_box.empty)"/>
+
+    <list id="notes" size="340 190" pos="30 44">
+        <box size="100% 50" linewidth="1">
+            <text id="writer" size="220 10" pos="4 3" color="black"/>
+            <text id="day" size="60 10" pos="228 3" color="#555555" textscale="0.8"/>
+            <text id="text" size="266 34" pos="4 14" color="black" textscale="0.8" wrap="true"/>
+            <button id="take" size="29 15" pos="276 4" textcolor="black"
+                    source="minecolonies:textures/gui/builderhut/builder_button_very_small.png"
+                    label="$(tc_townhall.gui.suggestion_box.take)"/>
+            <button id="discard" size="29 15" pos="276 26" color="red"
+                    source="minecolonies:textures/gui/builderhut/builder_button_very_small.png"
+                    label="X"/>
+        </box>
+    </list>
+</window>
