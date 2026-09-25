@@ -3,6 +3,7 @@ package me.sshcrack.tc_postal;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import me.sshcrack.mc_talking.api.ApiFeature;
 import me.sshcrack.mc_talking.api.TalkingColonistsApi;
+import me.sshcrack.tc_postal.shared.guide.Guides;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
@@ -31,6 +32,8 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 import me.sshcrack.tc_postal.dev.DevSelfTest;
 
 /**
@@ -52,6 +55,7 @@ public class PostalService {
             LOGGER.warn("Postal Service needs Talking Colonists 2.1 or newer (text generation); it stays inactive");
             return;
         }
+        registerGuide();
         /*? if forge {*/
         /*var bus = MinecraftForge.EVENT_BUS;
         bus.addListener((TickEvent.ServerTickEvent event) -> {
@@ -76,6 +80,20 @@ public class PostalService {
         });
         bus.addListener(PostalService::onInteract);
         bus.addListener((RegisterCommandsEvent event) -> MailCommand.register(event.getDispatcher()));
+    }
+
+    private static void registerGuide() {
+        Guides.register(MOD_ID + ":guide", "Postal Service",
+                "Write letters to your citizens and get replies in their own words. The courier walks your letter over and brings you the answer.",
+                List.of(
+                        "Write a letter in a book and quill.",
+                        "Sign it with the recipient's name as the title, like \"Anna\" or \"Dear Anna Smith\".",
+                        "Right-click the courier with it, or the recipient in person. Without a courier, any citizen passes it on.",
+                        "The reply is handed to you the next time you are in the colony."),
+                List.of(
+                        "The citizen remembers your letter and may bring it up when you talk.",
+                        "Letters come back undelivered after three days, or if the citizen left the colony.",
+                        "Operators: /mail rush delivers your letters now, /mail hands you the waiting replies."));
     }
 
     private static void onInteract(PlayerInteractEvent.EntityInteract event) {

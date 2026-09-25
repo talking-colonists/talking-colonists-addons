@@ -2,6 +2,7 @@ package me.sshcrack.tc_tavern;
 
 import me.sshcrack.mc_talking.api.ApiFeature;
 import me.sshcrack.mc_talking.api.TalkingColonistsApi;
+import me.sshcrack.tc_tavern.shared.guide.Guides;
 import me.sshcrack.mc_talking.api.conversation.CitizenConversationRules;
 import me.sshcrack.mc_talking.api.conversation.ConversationKind;
 import me.sshcrack.mc_talking.api.prompt.CitizenPromptService;
@@ -50,6 +51,7 @@ public class TavernRecruiter {
             LOGGER.warn("Tavern Recruiter needs Talking Colonists 2.1 or newer (visitor speakers); it stays inactive");
             return;
         }
+        registerGuide();
         // Players may talk to visitors; controlled sessions (other addons, the self-test) may include them.
         CitizenConversationRules.registerVisitorPolicy(MOD_ID + ":tavern_guests", 100,
                 (visitor, kind) -> kind == ConversationKind.PLAYER || kind == ConversationKind.CONTROLLED);
@@ -85,6 +87,19 @@ public class TavernRecruiter {
             store = null;
             server = null;
         });
+    }
+
+    private static void registerGuide() {
+        Guides.register(MOD_ID + ":guide", "Tavern Recruiter",
+                "Visitors at the tavern can be talked to like citizens. Each one knows what joining costs, and a good conversation can lower the price.",
+                List.of(
+                        "Build a tavern and wait for a visitor to arrive.",
+                        "Talk to the visitor like to any citizen.",
+                        "Make a good case: a job that suits them, kindness, a fair offer. They may lower their recruit cost.",
+                        "Recruit them in MineColonies' recruit window at the new price."),
+                List.of(
+                        "The price drops in small steps, never below half, and changes at most three times a day.",
+                        "Once they join, they remember the deal."));
     }
 
     /** The visitor's haggling state, or null while no server runs. */

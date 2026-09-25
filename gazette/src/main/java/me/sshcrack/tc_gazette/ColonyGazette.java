@@ -2,6 +2,7 @@ package me.sshcrack.tc_gazette;
 
 import me.sshcrack.mc_talking.api.ApiFeature;
 import me.sshcrack.mc_talking.api.TalkingColonistsApi;
+import me.sshcrack.tc_gazette.shared.guide.Guides;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 /*? if forge {*/
@@ -25,6 +26,8 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 import me.sshcrack.tc_gazette.dev.DevSelfTest;
 
 /** Mod entry point: wires the gazette to server start, stop, ticks and commands. */
@@ -41,6 +44,7 @@ public class ColonyGazette {
     /*? if forge {*/
     /*public ColonyGazette() {
         if (!supported()) return;
+        registerGuide();
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent event) -> start(event.getServer()));
         MinecraftForge.EVENT_BUS.addListener((ServerStoppingEvent event) -> stop());
         MinecraftForge.EVENT_BUS.addListener((TickEvent.ServerTickEvent event) -> {
@@ -53,12 +57,25 @@ public class ColonyGazette {
     /*? if neoforge {*/
     public ColonyGazette(IEventBus modEventBus, ModContainer modContainer) {
         if (!supported()) return;
+        registerGuide();
         NeoForge.EVENT_BUS.addListener((ServerStartedEvent event) -> start(event.getServer()));
         NeoForge.EVENT_BUS.addListener((ServerStoppingEvent event) -> stop());
         NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post event) -> tick());
         NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent event) -> GazetteCommand.register(event.getDispatcher()));
     }
     /*?}*/
+
+    private static void registerGuide() {
+        Guides.register(MOD_ID + ":guide", "Colony Gazette",
+                "Every morning the colony writes a newspaper about the day before: raids, births and deaths, new hires, new buildings, and whatever else happened.",
+                List.of(
+                        "Nothing to build: the teacher writes it, or a student in the library, or else the colony's notes.",
+                        "Each morning a citizen, the courier if you have one, walks up and hands you the new issue.",
+                        "Away from the colony? Your copy is brought when you come back."),
+                List.of(
+                        "Quiet days with nothing to report get no issue.",
+                        "Operators: /gazette publish writes an issue now, /gazette hands you a copy."));
+    }
 
     /** The running publisher, or null while no server runs. */
     public static @Nullable GazettePublisher publisher() {

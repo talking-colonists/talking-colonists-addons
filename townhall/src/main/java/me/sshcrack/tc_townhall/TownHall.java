@@ -4,6 +4,7 @@ import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.IColonyManager;
 import me.sshcrack.mc_talking.api.ApiFeature;
 import me.sshcrack.mc_talking.api.TalkingColonistsApi;
+import me.sshcrack.tc_townhall.shared.guide.Guides;
 import me.sshcrack.mc_talking.api.prompt.CitizenPromptService;
 import me.sshcrack.mc_talking.api.prompt.PromptContribution;
 import me.sshcrack.mc_talking.api.prompt.PromptTarget;
@@ -102,6 +103,7 @@ public class TownHall {
             LOGGER.warn("Town Hall needs Talking Colonists 2.1 or newer (broadcasts, text generation); it stays inactive");
             return;
         }
+        registerGuide();
         CitizenPromptService.registerContributor(MOD_ID + ":politics", 100, context -> {
             Elections running = elections;
             if (running == null || context.view().visitor() != null) return List.of();
@@ -141,6 +143,22 @@ public class TownHall {
         });
         bus.addListener(TownHall::onRightClickBlock);
         bus.addListener((RegisterCommandsEvent event) -> TownHallCommands.register(event.getDispatcher()));
+    }
+
+    private static void registerGuide() {
+        Guides.register(MOD_ID + ":guide", "Town Hall and Elections",
+                "Stand for mayor with a speech, and every citizen votes on what reached them. A Suggestion Box collects citizens' notes about what worries them.",
+                List.of(
+                        "Craft a Ballot Box (spruce planks around paper and an iron ingot) and place it in your colony.",
+                        "Right-click it, type a slogan and what you will do, and stand for mayor.",
+                        "With voice chat, you then have 30 seconds for a speech to the citizens nearby.",
+                        "The campaign lasts a day. Then the citizens vote; the box shows a live tally, and a citizen brings you the results.",
+                        "Craft a Suggestion Box (paper over a chest over a log): each morning unhappy citizens drop notes in it."),
+                List.of(
+                        "Right-clicking the Town Hall block with a signed book also works: the title is your slogan, the text your platform.",
+                        "If you are the only candidate, the unhappiest citizen stands against you, so you can lose.",
+                        "A new election can be called three days after the last one.",
+                        "Operators: /townhall rush ends campaigns now, /townhall notes has citizens write notes now."));
     }
 
     /** What citizens know about the colony's politics: a running campaign, the mayor, and being the mayor. */

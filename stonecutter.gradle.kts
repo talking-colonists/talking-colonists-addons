@@ -83,11 +83,12 @@ subprojects {
 // that shipped the same package could not be loaded together. Edit the shared/ copy, then run
 // `./gradlew syncShared`; `verifyShared` (run by CI) fails when a copy is out of date.
 val sharedPackages = mapOf(
-	"gazette" to listOf("book", "delivery", "provider", "store"),
-	"postal" to listOf("book", "delivery", "provider", "store"),
-	"tavern" to listOf("store"),
-	"noticeboard" to listOf("book", "provider", "store"),
-	"townhall" to listOf("book", "delivery", "net", "provider", "store"),
+	"campfire" to listOf("guide"),
+	"gazette" to listOf("book", "delivery", "guide", "provider", "store"),
+	"postal" to listOf("book", "delivery", "guide", "provider", "store"),
+	"tavern" to listOf("guide", "store"),
+	"noticeboard" to listOf("book", "guide", "provider", "store"),
+	"townhall" to listOf("book", "delivery", "guide", "net", "provider", "store"),
 	"playtest" to listOf("book"),
 )
 val sharedHeader = "// GENERATED from shared/: edit it there, then run ./gradlew syncShared\n"
