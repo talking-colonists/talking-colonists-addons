@@ -87,7 +87,7 @@ val sharedPackages = mapOf(
 	"gazette" to listOf("book", "delivery", "guide", "provider", "store"),
 	"postal" to listOf("book", "delivery", "guide", "provider", "store"),
 	"tavern" to listOf("guide", "store"),
-	"noticeboard" to listOf("book", "guide", "provider", "store"),
+	"noticeboard" to listOf("book", "guide", "net", "provider", "store"),
 	"townhall" to listOf("book", "delivery", "guide", "net", "provider", "store"),
 	"playtest" to listOf("book"),
 )

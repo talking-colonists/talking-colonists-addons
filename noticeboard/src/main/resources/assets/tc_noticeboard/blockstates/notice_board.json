@@ -1,0 +1,49 @@
+{
+  "variants": {
+    "facing=north,sheets=0": {
+      "model": "tc_noticeboard:block/notice_board"
+    },
+    "facing=north,sheets=1": {
+      "model": "tc_noticeboard:block/notice_board_few"
+    },
+    "facing=north,sheets=2": {
+      "model": "tc_noticeboard:block/notice_board_full"
+    },
+    "facing=east,sheets=0": {
+      "model": "tc_noticeboard:block/notice_board",
+      "y": 90
+    },
+    "facing=east,sheets=1": {
+      "model": "tc_noticeboard:block/notice_board_few",
+      "y": 90
+    },
+    "facing=east,sheets=2": {
+      "model": "tc_noticeboard:block/notice_board_full",
+      "y": 90
+    },
+    "facing=south,sheets=0": {
+      "model": "tc_noticeboard:block/notice_board",
+      "y": 180
+    },
+    "facing=south,sheets=1": {
+      "model": "tc_noticeboard:block/notice_board_few",
+      "y": 180
+    },
+    "facing=south,sheets=2": {
+      "model": "tc_noticeboard:block/notice_board_full",
+      "y": 180
+    },
+    "facing=west,sheets=0": {
+      "model": "tc_noticeboard:block/notice_board",
+      "y": 270
+    },
+    "facing=west,sheets=1": {
+      "model": "tc_noticeboard:block/notice_board_few",
+      "y": 270
+    },
+    "facing=west,sheets=2": {
+      "model": "tc_noticeboard:block/notice_board_full",
+      "y": 270
+    }
+  }
+}

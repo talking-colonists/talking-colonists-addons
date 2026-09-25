@@ -20,8 +20,11 @@ import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 *//*?}*/
 /*? if neoforge {*/
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -36,9 +39,12 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import me.sshcrack.tc_noticeboard.block.NoticeBoardBlockEntity;
+import me.sshcrack.tc_noticeboard.block.NoticeBoardBlocks;
 import me.sshcrack.tc_noticeboard.dev.DevSelfTest;
+import me.sshcrack.tc_noticeboard.shared.net.BlockActions;
 
-/** Mod entry point: lecterns as notice boards, and bells as the colony's town crier. */
+/** Mod entry point: the Notice Board block, lecterns as notice boards, and bells as the colony's town crier. */
 @Mod(NoticeBoard.MOD_ID)
 public class NoticeBoard {
     public static final String MOD_ID = /*$ mod_id*/ "tc_noticeboard";
@@ -53,7 +59,30 @@ public class NoticeBoard {
     private static @Nullable Board board;
     private static @Nullable MinecraftServer server;
 
-    public NoticeBoard() {
+    /*? if neoforge {*/
+    public NoticeBoard(IEventBus modBus, ModContainer container) {
+    /*?}*/
+    /*? if forge {*/
+    /*public NoticeBoard() {
+        var modBus = FMLJavaModLoadingContext.get().getModEventBus();
+    *//*?}*/
+        // The block always registers, so worlds that contain it load even when the addon stays inactive.
+        NoticeBoardBlocks.register(modBus);
+        /*? if neoforge {*/
+        BlockActions.init(MOD_ID, modBus);
+        /*?}*/
+        /*? if forge {*/
+        /*BlockActions.init(MOD_ID);
+        *//*?}*/
+        BlockActions.on(NoticeBoardBlockEntity.POST, (player, pos, argument, text) -> {
+            if (board != null) board.postOnBoard(player, player.serverLevel(), pos, first(text), rest(text));
+        });
+        BlockActions.on(NoticeBoardBlockEntity.ANNOUNCE, (player, pos, argument, text) -> {
+            if (board != null) board.announceFromBoard(player, player.serverLevel(), pos, first(text), rest(text));
+        });
+        BlockActions.on(NoticeBoardBlockEntity.TAKE_DOWN, (player, pos, argument, text) -> {
+            if (board != null) board.takeDown(player, player.serverLevel(), pos);
+        });
         if (!TalkingColonistsApi.isAvailable() || !TalkingColonistsApi.supports(ApiFeature.BROADCAST_PUBLISHING)
                 || !TalkingColonistsApi.supports(ApiFeature.TEXT_GENERATION)) {
             LOGGER.warn("Notice Board needs Talking Colonists 2.1 or newer (broadcasts, text generation); it stays inactive");
@@ -88,18 +117,20 @@ public class NoticeBoard {
 
     private static void registerGuide() {
         Guides.register(MOD_ID + ":guide", "Notice Board",
-                "Post a signed book on a lectern in the colony: the citizens nearby read it and spread the word, and a few write replies that get pinned into the book.",
+                "Post a notice for the whole colony: the citizens near the board read it and spread the word, and a few pin their replies under it.",
                 List.of(
-                        "Write a notice in a book and quill and sign it.",
-                        "Put it on a lectern inside your colony.",
-                        "Citizens near the board read it and pass it on. You hear when half the colony knows, and when everyone does.",
-                        "Come back a few minutes later and read the replies pinned into the book.",
-                        "To tell everyone at once, ring a bell in the colony while holding a signed book."),
+                        "Craft a Notice Board (planks around paper, on two sticks) and place it in your colony.",
+                        "Right-click it, write a title and your notice, and press Post.",
+                        "Citizens near the board read it and pass it on; the window shows how far the word has spread.",
+                        "Over the next few minutes, sheets with citizens' replies appear on the board. Read them in its window.",
+                        "Announce tells every citizen at once without pinning anything."),
                 List.of(
-                        "Taking the book down cancels the replies.",
+                        "Take down removes the notice and stops the replies; posting a new one replaces it.",
+                        "A signed book on a lectern in the colony works as a notice too, with replies pinned into the book.",
+                        "Ring a bell in the colony while holding a signed book to tell everyone at once.",
                         "Operators: /noticeboard rush collects the waiting replies now."));
         Guides.introduce(MOD_ID + ":notices", "the notice board",
-                "Tell them they can post a notice for the whole colony: put a signed book on a lectern, citizens spread the word, and some pin their replies into it.",
+                "Tell them they can post a notice for the whole colony: craft a Notice Board and write on it, citizens spread the word, and some pin their replies under it.",
                 MOD_ID + ":guide", (player, colony) -> colony.getCitizenManager().getCurrentCitizenCount() >= 4);
     }
 
@@ -117,6 +148,17 @@ public class NoticeBoard {
         }
         if (!(state.getBlock() instanceof LecternBlock) || state.getValue(LecternBlock.HAS_BOOK)) return;
         PENDING.add(new PendingPost(player, level, event.getPos().immutable()));
+    }
+
+    /** The window sends a title, a line break, then the text. */
+    private static String first(String text) {
+        int split = text.indexOf('\n');
+        return split < 0 ? text : text.substring(0, split);
+    }
+
+    private static String rest(String text) {
+        int split = text.indexOf('\n');
+        return split < 0 ? "" : text.substring(split + 1);
     }
 
     /** The running board, or null while no server runs. */

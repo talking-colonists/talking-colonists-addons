@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PWP",
+    "PWP",
+    "S S"
+  ],
+  "key": {
+    "P": {
+      "tag": "minecraft:planks"
+    },
+    "W": {
+      "item": "minecraft:paper"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
+  },
+  "result": {
+    "item": "tc_noticeboard:notice_board",
+    "count": 1
+  }
+}
