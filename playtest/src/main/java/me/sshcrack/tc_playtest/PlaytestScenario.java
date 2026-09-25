@@ -39,6 +39,13 @@ final class PlaytestScenario {
                     new Step(110, "dusk: campfire night starts", List.of("time set 12500", "campfire start")),
                     new Step(290, "campfire stopped", List.of("campfire stop")),
                     new Step(305, "scenario done", List.of())),
+            // The player stands for mayor with the campaign book at the Town Hall; the campaign is rushed, a
+            // citizen stands against them, walks up with a pamphlet and gives a campaign speech.
+            "election", List.of(
+                    new Step(20, "day: at the town hall", List.of("playtest home", "time set 6000", "weather clear")),
+                    new Step(25, "the player stands for mayor with the campaign book", List.of("playtest stand")),
+                    new Step(60, "the campaign is rushed: a citizen stands", List.of("townhall rush")),
+                    new Step(200, "scenario done", List.of())),
             // The mayor's hat on a citizen mayor and on the player, then the mayor's report.
             "mayor", List.of(
                     new Step(20, "day: standing in the colony", List.of("playtest home", "time set 6000", "weather clear")),

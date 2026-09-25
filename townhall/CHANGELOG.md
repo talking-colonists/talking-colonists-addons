@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A citizen who stands for mayor gives a campaign speech, as players do: they walk up to a player (an opposing candidate first) with a campaign pamphlet and speak aloud once nobody nearby is talking. The colony hears what they said, and voters weigh it.
 - The mayor's office. The winner wears the Mayor's Hat (a citizen on their head; a citizen brings a player mayor theirs).
   - The mayor's campaign promises are measured against the colony.
   - A citizen mayor brings a colony member a written report once a day, talks it through, and makes a proposal: a hut upgrade (agreeing places the work order) or a new hut (agreeing is a promise to place it; the mayor then orders the build). Any building work for the same need counts, and a proposal is kept once a builder is at work on it. Answer in the conversation or at the Mayor's desk in the Ballot Box window.
