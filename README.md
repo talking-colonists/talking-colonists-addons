@@ -68,6 +68,8 @@ MineColonies' recruit window, and the visitor remembers the deal after they join
 
 ## Notice Board
 
+Full guide: [docs/addons/noticeboard.md](docs/addons/noticeboard.md).
+
 Craft a Notice Board (planks around paper, on two sticks), place it in your colony and right-click it.
 Write a title and your notice and press **Post**: the citizens near the board read it first (a Talking
 Colonists broadcast from "the notice board") and spread it to the others, so they bring it up when you
