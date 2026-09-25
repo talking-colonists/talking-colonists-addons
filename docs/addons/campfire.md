@@ -9,8 +9,10 @@ conversation, so you hear them talk, and you can join in.
 1. Place a **campfire** inside your colony and keep it lit.
 2. Be near it at dusk (in-game time 12000 to 13500). Three to five idle citizens from nearby walk
    over and sit around the fire.
-3. Listen as they tell their stories in turn. Chat while you stand near the fire (within about 24
-   blocks) and they hear you and may answer.
+3. Listen as they tell their stories in turn. To join in, right-click the fire with an empty hand
+   and speak (Simple Voice Chat), or type in chat while you stand near the fire (within about 24
+   blocks). The tellers stop and listen, the one you look at answers you, and then the stories go
+   on.
 
 When the night is over, the tellers stand up and go back to their evening.
 

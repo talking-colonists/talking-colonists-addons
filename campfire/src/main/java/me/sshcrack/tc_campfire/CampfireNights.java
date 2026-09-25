@@ -3,11 +3,14 @@ package me.sshcrack.tc_campfire;
 import me.sshcrack.mc_talking.api.TalkingColonistsApi;
 import me.sshcrack.tc_campfire.shared.guide.Guides;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 /*? if forge {*/
 /*import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -17,6 +20,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.ServerChatEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -67,6 +71,12 @@ public class CampfireNights {
         bus.addListener((ServerChatEvent event) -> {
             if (director != null) director.onChat(event.getPlayer(), event.getRawText());
         });
+        bus.addListener((PlayerInteractEvent.RightClickBlock event) -> {
+            // Speaking up at the fire: an empty hand, so food still goes on the campfire as usual.
+            if (director == null || !(event.getEntity() instanceof ServerPlayer player) || !event.getItemStack().isEmpty()) return;
+            if (event.getHand() != InteractionHand.MAIN_HAND) return;
+            if (director.onUse(player, event.getPos())) event.setCanceled(true);
+        });
         bus.addListener((RegisterCommandsEvent event) -> CampfireCommand.register(event.getDispatcher()));
     }
 
@@ -76,7 +86,7 @@ public class CampfireNights {
                 List.of(
                         "Place a campfire inside your colony and keep it lit.",
                         "Be near it at dusk: three to five idle citizens walk over and sit around it.",
-                        "Listen as they tell their stories in turn. Chat while you stand by the fire and they may answer you."),
+                        "Listen as they tell their stories in turn. To join in, right-click the fire with an empty hand and speak, or type in chat: they fall silent, one of them answers you, then the stories go on."),
                 List.of(
                         "There is at most one campfire night per colony and day, and only while the citizens' voices are not all busy.",
                         "The night becomes colony news, so the Colony Gazette may report it.",

@@ -9,6 +9,7 @@ public final class CampfireStory {
     public static final int MAX_TELLERS = 5;
     /** Seats are this far from the campfire's center, in blocks. */
     public static final double SEAT_RADIUS = 2.5;
+    static final int MAX_SAID_CHARS = 400;
     static final int MAX_NEWS = 5;
     static final int MAX_NEWS_CHARS = 160;
 
@@ -35,6 +36,14 @@ public final class CampfireStory {
             }
         }
         return out.toString().strip();
+    }
+
+    /** What the teller who answers a player hears: the stories stopped for them, so answer them first. */
+    public static String answer(String player, String said) {
+        return player + ", standing with you at the campfire, spoke up and everyone fell silent. They said: \""
+                + cut(said.strip(), MAX_SAID_CHARS) + "\"\nAnswer " + player + " directly, as yourself, in 1 to 3 sentences, "
+                + "warm and in the spirit of the evening. If they asked for a story, a song or your turn, go along with it. "
+                + "The stories go on after you.";
     }
 
     /** Seat offsets (x, z) from the campfire's center, evenly spaced on a circle. */
