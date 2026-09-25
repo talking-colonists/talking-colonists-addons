@@ -27,9 +27,10 @@ import java.util.UUID;
 import net.minecraft.network.chat.MutableComponent;
 
 /**
- * Takes letters from players, has the recipient write back through Talking Colonists once the letter
- * arrives, and has the courier (or the writer) carry the reply to the player when they are in the
- * colony. Replies wait in the player's mailbox until then. Server thread only.
+ * Takes letters from players. The citizen who takes a letter walks it to the recipient (or, when that
+ * is not possible, it arrives after a while); the recipient writes back through Talking Colonists, and
+ * the courier (or the writer) carries the reply to the player when they are in the colony. Replies
+ * wait in the player's mailbox until then. Server thread only.
  */
 public final class PostOffice {
     static final String SOURCE = PostalService.MOD_ID;
@@ -123,7 +124,33 @@ public final class PostOffice {
         tell(player, handedOver
                 ? recipient.getName() + " takes your letter and will write back soon."
                 : handler.getName() + " will bring your letter to " + recipient.getName() + ".");
+        if (!handedOver) walkLetter(sent, citizen, recipient, player);
         return true;
+    }
+
+    /**
+     * The citizen who took the letter walks it to the recipient; once handed over, the recipient reads it
+     * a minute later. If the walk is not possible or fails, the letter keeps its courier time.
+     */
+    private void walkLetter(PostStore.Letter letter, AbstractEntityCitizen carrier, ICitizenData recipient, ServerPlayer player) {
+        AbstractEntityCitizen to = recipient.getEntity().orElse(null);
+        if (to == null) return;
+        couriers.carry(walkKey(letter), carrier, to, player, "a letter from " + letter.playerName, delivered -> {
+            if (!delivered || !store.letters().contains(letter)) return;
+            letter.carried = true;
+            // A minute to read it, unless the letter was rushed meanwhile.
+            letter.dueGameTime = Math.max(now(), Math.min(letter.dueGameTime, now() + HANDED_OVER_TICKS));
+            store.save();
+        });
+    }
+
+    /** Whether the letter is being walked to its recipient right now. */
+    public boolean isCarrying(PostStore.Letter letter) {
+        return couriers.isRunning(walkKey(letter));
+    }
+
+    private static String walkKey(PostStore.Letter letter) {
+        return "letter|" + letter.id;
     }
 
     private static boolean isCourier(ICitizenData citizen) {
@@ -135,7 +162,7 @@ public final class PostOffice {
         if (++ticks % CHECK_INTERVAL_TICKS != 0) return;
         long now = now();
         for (PostStore.Letter letter : List.copyOf(store.letters())) {
-            if (letter.writing || letter.dueGameTime > now) continue;
+            if (letter.writing || letter.dueGameTime > now || couriers.isRunning(walkKey(letter))) continue;
             deliver(letter, now);
         }
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {

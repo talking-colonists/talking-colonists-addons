@@ -46,9 +46,11 @@ news, so the Gazette may report it.
 
 Write a letter in a book and quill and sign it with the recipient's name as the title ("Anna",
 "Dear Anna Smith" and "To: Anna" all work). Right-click the colony's courier with it, or the
-recipient in person; without a courier any citizen passes it on. A few minutes later the recipient
-writes back in character, and the courier (or the writer) walks up to you and hands you the reply the
-next time you are in the colony.
+recipient in person; without a courier any citizen passes it on. The citizen who takes it walks it
+over to the recipient and hands it over (you get a line in chat); if the recipient is too far away or
+not around, it arrives a few minutes later instead. The recipient reads it and writes back in
+character, and the courier (or the writer) walks up to you and hands you the reply the next time you
+are in the colony.
 
 - Operators: `/mail rush` makes your letters reach their recipients now, `/mail` hands you all waiting replies.
 

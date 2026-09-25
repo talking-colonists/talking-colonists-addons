@@ -31,6 +31,8 @@ public final class PostStore {
         public int attempts;
         /** A reply is being written right now (not saved). */
         public transient boolean writing;
+        /** The citizen who took it walked it over to the recipient (not saved). */
+        public transient boolean carried;
     }
 
     /**

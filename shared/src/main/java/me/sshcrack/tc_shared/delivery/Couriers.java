@@ -28,7 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Citizens who walk up to a player and hand them an item, so nothing has to be fetched by command.
+ * Citizens who walk up to a player and hand them an item, so nothing has to be fetched by command; or
+ * who carry something to another citizen (a letter to its recipient).
  * On handing it over the citizen says a short line aloud through Talking Colonists; when it cannot
  * speak right now (quota, capacity, cooldown, no key) the line becomes a chat message instead.
  * The colony's courier carries when there is one (or a preferred citizen, such as a letter's writer);
@@ -38,6 +39,8 @@ import org.slf4j.LoggerFactory;
 public final class Couriers {
     /** Players farther than this from the carrier are not walked to. */
     public static final double MAX_RANGE = 96;
+    /** Citizens carry things this far across their colony. */
+    public static final double CITIZEN_RANGE = 160;
     static final double HAND_OVER_DISTANCE = 2.5;
     static final int TIMEOUT_TICKS = 20 * 90;
     /** Stuck this long without getting closer: hand over from where they are if close enough, else give up. */
@@ -45,10 +48,14 @@ public final class Couriers {
     static final double STUCK_HAND_OVER_DISTANCE = 12;
     private static final double WALK_SPEED = 0.8;
 
-    /** One walk to a player. {@code done} gets true once the item is in the player's hands. */
+    /**
+     * One walk. To a player: {@code done} gets true once the item is in the player's hands. To a citizen
+     * ({@code recipient} set, no item): {@code done} gets true on arrival.
+     */
     private static final class Job {
         final String key;
         final ServerPlayer player;
+        final @Nullable AbstractEntityCitizen recipient;
         final AbstractEntityCitizen carrier;
         final CitizenActivityReservation reservation;
         final String what;
@@ -59,10 +66,12 @@ public final class Couriers {
         int lastProgressTick;
         double bestDistanceSq = Double.MAX_VALUE;
 
-        Job(String key, ServerPlayer player, AbstractEntityCitizen carrier, CitizenActivityReservation reservation,
-            String what, @Nullable String lineHint, Supplier<ItemStack> item, Consumer<Boolean> done) {
+        Job(String key, ServerPlayer player, @Nullable AbstractEntityCitizen recipient, AbstractEntityCitizen carrier,
+            CitizenActivityReservation reservation, String what, @Nullable String lineHint, Supplier<ItemStack> item,
+            Consumer<Boolean> done) {
             this.key = key;
             this.player = player;
+            this.recipient = recipient;
             this.carrier = carrier;
             this.reservation = reservation;
             this.what = what;
@@ -108,10 +117,30 @@ public final class Couriers {
             CitizenActivityReservation reservation = CitizenConversationService
                     .reserveActivity(carrier, ownerId, Duration.ofSeconds(TIMEOUT_TICKS / 20 + 30)).orElse(null);
             if (reservation == null) continue;
-            jobs.add(new Job(key, player, carrier, reservation, what, lineHint, item, done));
+            jobs.add(new Job(key, player, null, carrier, reservation, what, lineHint, item, done));
             return true;
         }
         return false;
+    }
+
+    /**
+     * Sends {@code carrier} to {@code recipient}, another citizen, to hand over {@code what} (e.g. "a
+     * letter from Steve"). On arrival the carrier says a line to them, and {@code done} gets true. Returns
+     * false, without calling {@code done}, when the carrier cannot go right now or the recipient is too
+     * far. {@code player} is who sent it; they get a chat line about the hand-over.
+     */
+    public boolean carry(String key, AbstractEntityCitizen carrier, AbstractEntityCitizen recipient, ServerPlayer player,
+                         String what, Consumer<Boolean> done) {
+        if (isRunning(key) || jobs.stream().anyMatch(job -> job.carrier == carrier)) return false;
+        if (!carrier.isAlive() || carrier.isRemoved() || carrier.isSleeping() || !recipient.isAlive()
+                || carrier.level() != recipient.level() || carrier.distanceToSqr(recipient) > CITIZEN_RANGE * CITIZEN_RANGE) {
+            return false;
+        }
+        CitizenActivityReservation reservation = CitizenConversationService
+                .reserveActivity(carrier, ownerId, Duration.ofSeconds(TIMEOUT_TICKS / 20 + 30)).orElse(null);
+        if (reservation == null) return false;
+        jobs.add(new Job(key, player, recipient, carrier, reservation, what, null, () -> ItemStack.EMPTY, done));
+        return true;
     }
 
     /** Preferred citizen first, then couriers, then everyone else; nearest to the player first. */
@@ -151,6 +180,10 @@ public final class Couriers {
 
     private void step(Job job) {
         job.ticks++;
+        if (job.recipient != null) {
+            stepToCitizen(job, job.recipient);
+            return;
+        }
         ServerPlayer player = current(job.player);
         if (player == null || !job.carrier.isAlive() || job.carrier.isRemoved() || job.carrier.level() != player.level()
                 || job.ticks > TIMEOUT_TICKS || job.reservation.isClosed()) {
@@ -192,6 +225,61 @@ public final class Couriers {
         job.carrier.getLookControl().setLookAt(player, 30, 30);
     }
 
+    /** A walk to another citizen, who may be moving: follow them, and hand over once close. */
+    private void stepToCitizen(Job job, AbstractEntityCitizen recipient) {
+        if (!job.carrier.isAlive() || job.carrier.isRemoved() || !recipient.isAlive() || recipient.isRemoved()
+                || job.carrier.level() != recipient.level() || job.ticks > TIMEOUT_TICKS || job.reservation.isClosed()) {
+            logger.info("Carrying {} ended without hand-over (ticks {})", job.key, job.ticks);
+            finish(job, false);
+            return;
+        }
+        double distanceSq = job.carrier.distanceToSqr(recipient);
+        if (distanceSq <= HAND_OVER_DISTANCE * HAND_OVER_DISTANCE) {
+            job.carrier.getNavigation().stop();
+            job.carrier.swing(InteractionHand.MAIN_HAND);
+            recipient.getLookControl().setLookAt(job.carrier, 30, 30);
+            finish(job, true);
+            speakTo(job, recipient);
+            return;
+        }
+        if (distanceSq < job.bestDistanceSq - 1) {
+            job.bestDistanceSq = distanceSq;
+            job.lastProgressTick = job.ticks;
+        } else if (job.ticks - job.lastProgressTick > STUCK_TICKS) {
+            logger.info("Carrying {} gave up: stuck {} blocks away", job.key, Math.round(Math.sqrt(distanceSq)));
+            finish(job, false);
+            return;
+        }
+        BlockPos target = recipient.blockPosition();
+        BlockPos heading = job.carrier.getNavigation().getTargetPos();
+        boolean offCourse = heading == null || heading.distSqr(target) > 4 || job.carrier.getNavigation().isDone();
+        if (job.ticks % 10 == 1 && offCourse) {
+            job.carrier.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, WALK_SPEED);
+        }
+        job.carrier.getLookControl().setLookAt(recipient, 30, 30);
+    }
+
+    /** The carrier says a line to the recipient; the sender gets a chat line either way. */
+    private void speakTo(Job job, AbstractEntityCitizen recipient) {
+        String carrier = name(job.carrier);
+        String to = name(recipient);
+        ServerPlayer sender = server.getPlayerList().getPlayer(job.player.getUUID());
+        if (sender != null) {
+            sender.sendSystemMessage(Component.literal(carrier + " hands " + to + " " + job.what + ".").withStyle(ChatFormatting.GRAY));
+        }
+        String directive = "You just walked up to " + to + " and handed them " + job.what + "."
+                + " Say one short, friendly sentence to them about it, at most 15 words, in your own voice.";
+        try {
+            CitizenConversationService.requestAmbientLine(job.carrier, directive);
+        } catch (RuntimeException e) {
+            logger.debug("No line for carrying {}", job.key, e);
+        }
+    }
+
+    private static String name(AbstractEntityCitizen citizen) {
+        return citizen.getCitizenData() != null ? citizen.getCitizenData().getName() : citizen.getName().getString();
+    }
+
     /**
      * The player's current entity (a respawn replaces it), or null once they logged out. Fake players
      * (tests, automation) are never in the player list and count as present while they exist.
@@ -218,8 +306,7 @@ public final class Couriers {
 
     /** The citizen says a line about the hand-over; chat only when it cannot speak right now. */
     private void speak(Job job, ServerPlayer player) {
-        String name = job.carrier.getCitizenData() != null ? job.carrier.getCitizenData().getName()
-                : job.carrier.getName().getString();
+        String name = name(job.carrier);
         Component chat = Component.literal(name + " hands you " + job.what + ".").withStyle(ChatFormatting.GRAY);
         String directive = "You just walked up to " + player.getGameProfile().getName() + " and handed them "
                 + job.what + "." + (job.lineHint == null ? "" : " " + job.lineHint)
