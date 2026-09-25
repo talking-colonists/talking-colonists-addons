@@ -4,6 +4,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -16,12 +17,14 @@ public final class Office {
     public static final int MAX_PROMISES = 3;
     /** A proposal nobody answered in this many days counts as ignored. */
     public static final int ANSWER_DAYS = 2;
-    /** An accepted "build a new ..." proposal must show a placed hut within this many days. */
-    public static final int BUILD_DAYS = 3;
-    /** A placed hut the builders have not finished this many days later is left to the builders. */
-    public static final int CONSTRUCTION_DAYS = 6;
-    /** An accepted upgrade the builder has not finished after this many days is left to the builder. */
-    public static final int UPGRADE_DAYS = 6;
+    /**
+     * An accepted proposal is kept once a builder is at work on a hut that helps (new or upgraded, the
+     * proposed one or another); building takes days, so the mayor does not wait for it to be finished.
+     * Without any building work ordered this many days later, it was not kept.
+     */
+    public static final int START_DAYS = 4;
+    /** Work ordered but still waiting for a free builder this many days later: no builder could take it on. */
+    public static final int WAIT_DAYS = 8;
     /** After a refused or ignored proposal, the mayor waits this long before proposing for the same need. */
     public static final int RETRY_DAYS = 2;
     public static final int MAX_HISTORY = 8;
@@ -73,18 +76,40 @@ public final class Office {
         /** For "build a new ...": the day its hut was placed, -1 before. */
         public int placedDay = -1;
         public String reason = "";
+        /** The levels of the huts that help ({@code BlockPos#asLong} as text → level) when it was accepted. */
+        public Map<String, Integer> levels = new HashMap<>();
+        /** The builder who took it on, once one did. */
+        public String builder = "";
 
         /** "upgrade the residence to level 2", "have the builder build the hospital", "build a hospital". */
         public String what() {
             String name = buildingName(building);
             if (kind == ProposalKind.BUILD) return "build " + article(name) + " " + name;
-            return level == 0 ? "have the builder build the " + name + " hut that stands ready"
+            return level == 0 ? "have a builder build the " + name + " that stands ready"
                     : "upgrade the " + name + " to level " + (level + 1);
         }
     }
 
-    /** A hut of the colony, as the mayor sees it when choosing a proposal. */
-    public record Hut(String type, long pos, int level, int maxLevel, boolean busy) {
+    /**
+     * A hut of the colony, as the mayor sees it: {@code busy} when a work order for it exists,
+     * {@code builder} the builder at work on that order (null while it waits for one).
+     */
+    public record Hut(String type, long pos, int level, int maxLevel, boolean busy, @Nullable String builder) {
+        public Hut(String type, long pos, int level, int maxLevel, boolean busy) {
+            this(type, pos, level, maxLevel, busy, null);
+        }
+    }
+
+    /** Where an accepted proposal stands. */
+    public enum Step {
+        /** Nothing to report yet. */
+        WAITING,
+        /** A builder is at work on a hut that helps, or one got a level higher: kept. */
+        STARTED,
+        /** No building work for the need was ordered in time. */
+        BROKEN,
+        /** Work was ordered, but no builder took it on in time. */
+        STALLED
     }
 
     private Office() {
@@ -115,7 +140,8 @@ public final class Office {
     /**
      * What the mayor proposes next, or null: for the need that affects the most citizens (the oldest
      * first on a tie), the lowest hut that helps and can be upgraded, else a new hut when the colony
-     * has none of the kind. Needs refused or ignored recently are left alone for a while.
+     * has none of the kind. Needs refused or ignored recently, and needs a builder already has work for,
+     * are left alone for a while.
      */
     public static @Nullable Proposal choose(Map<Need, Integer> counts, Map<String, Integer> since, List<Hut> huts,
                                             List<Proposal> history, int day) {
@@ -125,6 +151,7 @@ public final class Office {
                 .thenComparingInt(need -> since.getOrDefault(need.id(), day)));
         for (Need need : needs) {
             if (recentlyTurnedDown(need, history, day)) continue;
+            if (huts.stream().anyMatch(hut -> hut.busy() && need.buildings().contains(hut.type()))) continue; // under way
             Hut best = null;
             boolean any = false;
             for (Hut hut : huts) {
@@ -150,6 +177,39 @@ public final class Office {
             }
         }
         return null;
+    }
+
+    /** The levels of the huts that help with {@code need}, to compare against later. */
+    public static Map<String, Integer> levels(Need need, List<Hut> huts) {
+        Map<String, Integer> levels = new HashMap<>();
+        for (Hut hut : huts) {
+            if (need.buildings().contains(hut.type())) levels.put(Long.toString(hut.pos()), hut.level());
+        }
+        return levels;
+    }
+
+    /**
+     * How an accepted proposal is going. Any building work that helps with its need counts, not only the
+     * hut proposed: a builder at work on it, or a hut of the kind with a higher level than at acceptance.
+     * On {@link Step#STARTED} the proposal names the hut and the builder.
+     */
+    public static Step followUp(Proposal proposal, Need need, List<Hut> huts, int day) {
+        boolean ordered = false;
+        for (Hut hut : huts) {
+            if (!need.buildings().contains(hut.type())) continue;
+            Integer before = proposal.levels.get(Long.toString(hut.pos()));
+            boolean higher = hut.level() > (before == null ? 0 : before);
+            if (hut.builder() != null || higher) {
+                proposal.building = hut.type();
+                proposal.pos = hut.pos();
+                proposal.builder = hut.builder() == null ? "" : hut.builder();
+                return Step.STARTED;
+            }
+            ordered |= hut.busy();
+        }
+        int days = day - proposal.answeredDay;
+        if (ordered) return days > WAIT_DAYS ? Step.STALLED : Step.WAITING;
+        return days > START_DAYS ? Step.BROKEN : Step.WAITING;
     }
 
     private static boolean recentlyTurnedDown(Need need, List<Proposal> history, int day) {

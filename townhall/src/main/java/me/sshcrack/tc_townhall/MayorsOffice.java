@@ -327,12 +327,16 @@ public final class MayorsOffice {
         proposal.answeredDay = day;
         proposal.reason = ElectionText.cut(reason.strip().replaceAll("\\s+", " "), MAX_REASON_CHARS);
         String outcome;
+        Need need = Need.byId(proposal.need);
+        if (need != null) proposal.levels = Office.levels(need, ColonyNeeds.huts(colony));
         if (!accept) {
             proposal.status = Office.ProposalStatus.REFUSED;
             outcome = "You turned down the mayor's proposal to " + proposal.what() + ".";
         } else if (proposal.kind == Office.ProposalKind.BUILD) {
             proposal.status = Office.ProposalStatus.ACCEPTED;
-            outcome = "You agreed to " + proposal.what() + ". Place its hut within " + Office.BUILD_DAYS + " days; the colony will remember.";
+            outcome = "You agreed to " + proposal.what() + ". Place its hut and a builder will be sent to it; "
+                    + "any building work for " + (need == null ? "it" : need.label()) + " a builder starts within "
+                    + Office.START_DAYS + " days keeps your word.";
         } else {
             BlockPos pos = BlockPos.of(proposal.pos);
             IBuilding building = colony.getServerBuildingManager().getBuilding(pos);
@@ -366,48 +370,49 @@ public final class MayorsOffice {
             }
             if (day - proposal.madeDay < Office.ANSWER_DAYS) return false;
             proposal.status = Office.ProposalStatus.IGNORED;
-        } else if (proposal.kind == Office.ProposalKind.BUILD) {
-            IBuilding hut = colony.getServerBuildingManager().getBuildings().values().stream()
-                    .filter(building -> ColonyNeeds.type(building).equals(proposal.building))
-                    .max(Comparator.comparingInt(IBuilding::getBuildingLevel)).orElse(null);
-            if (hut == null) {
-                if (day - proposal.answeredDay <= Office.BUILD_DAYS) return false;
-                proposal.status = Office.ProposalStatus.BROKEN;
-            } else if (hut.getBuildingLevel() >= 1) {
-                proposal.status = Office.ProposalStatus.DONE;
-            } else {
-                boolean changed = false;
-                if (proposal.placedDay < 0) {
-                    proposal.placedDay = day;
-                    proposal.pos = hut.getPosition().asLong();
-                    changed = true;
-                }
-                // The player agreed to it being built: once the hut stands, the mayor orders the build.
-                ServerPlayer player = proposal.playerId == null ? null : server.getPlayerList().getPlayer(proposal.playerId);
-                if (player != null && !ColonyNeeds.hasWorkOrder(colony, hut.getPosition())) {
-                    hut.requestUpgrade(player, BlockPos.ZERO);
-                    if (ColonyNeeds.hasWorkOrder(colony, hut.getPosition())) {
-                        TownHall.LOGGER.info("Mayor {} ordered the build of the new {}", mayor.name, proposal.building);
-                    }
-                }
-                if (day - proposal.placedDay <= Office.CONSTRUCTION_DAYS) return changed;
-                archive(mayor, proposal); // still with the builders: part of the record, not waited on any more
+        } else {
+            if (need == null) {
+                archive(mayor, proposal);
                 return true;
             }
-        } else {
-            BlockPos pos = BlockPos.of(proposal.pos);
-            IBuilding building = colony.getServerBuildingManager().getBuilding(pos);
-            if (building != null && building.getBuildingLevel() > proposal.level) proposal.status = Office.ProposalStatus.DONE;
-            else if (building == null || !ColonyNeeds.hasWorkOrder(colony, pos)) proposal.status = Office.ProposalStatus.BROKEN;
-            else if (day - proposal.answeredDay > Office.UPGRADE_DAYS) {
-                archive(mayor, proposal); // still with the builders: part of the record, not waited on any more
-                return true;
-            } else return false;
+            List<Office.Hut> huts = ColonyNeeds.huts(colony);
+            boolean changed = orderPlacedHuts(colony, mayor, proposal, need, huts);
+            if (changed) huts = ColonyNeeds.huts(colony);
+            switch (Office.followUp(proposal, need, huts, day)) {
+                case WAITING -> {
+                    return changed;
+                }
+                case STARTED -> proposal.status = Office.ProposalStatus.DONE;
+                case BROKEN -> proposal.status = Office.ProposalStatus.BROKEN;
+                case STALLED -> proposal.status = Office.ProposalStatus.FAILED;
+            }
         }
         publish(colony, mayor, OfficeText.outcome(mayor.name, proposal));
         remember(colony, mayor, proposal);
         archive(mayor, proposal);
         return true;
+    }
+
+    /**
+     * The player agreed to building work for the need: a hut of the kind that was placed but not built
+     * yet gets its build ordered, in the player's name, as they would at the hut.
+     */
+    private boolean orderPlacedHuts(IColony colony, Elections.Mayor mayor, Office.Proposal proposal, Need need, List<Office.Hut> huts) {
+        ServerPlayer player = proposal.playerId == null ? null : server.getPlayerList().getPlayer(proposal.playerId);
+        if (player == null) return false;
+        boolean ordered = false;
+        for (Office.Hut hut : huts) {
+            if (hut.level() > 0 || hut.busy() || !need.buildings().contains(hut.type())) continue;
+            IBuilding building = colony.getServerBuildingManager().getBuilding(BlockPos.of(hut.pos()));
+            if (building == null) continue;
+            building.requestUpgrade(player, BlockPos.ZERO);
+            if (ColonyNeeds.hasWorkOrder(colony, building.getPosition())) {
+                if (proposal.placedDay < 0) proposal.placedDay = colony.getDay();
+                ordered = true;
+                TownHall.LOGGER.info("Mayor {} ordered the build of the new {}", mayor.name, hut.type());
+            }
+        }
+        return ordered;
     }
 
     private static void archive(Elections.Mayor mayor, Office.Proposal proposal) {

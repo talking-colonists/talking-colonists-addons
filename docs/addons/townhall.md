@@ -46,8 +46,15 @@ mayor is. A citizen mayor wears it on their head. A player mayor is brought one 
   new hut the colony has none of (for example a hospital while citizens are sick). Say yes or no in
   the conversation, or answer at the **Mayor's desk** in the Ballot Box window.
   - Agreeing to an upgrade places the builder's work order right away.
-  - Agreeing to a new hut is a promise. Only you can place the hut block, so place it within three
-    days.
+  - Agreeing to a new hut is a promise to place its hut block. Once you place it, the mayor orders the
+    build in your name.
+  - Any building work for the same need keeps your word, not only the hut the mayor named. For
+    example, a new barracks counts for a proposed guard tower.
+  - Building takes days, so the mayor doesn't wait for it to finish. The proposal is kept once a
+    builder is at work on it. If no work was ordered within four days, the colony remembers that
+    you didn't keep your word. If work was ordered but no builder was free to start within eight
+    days, that is remembered too, but it isn't held against you.
+  - The mayor doesn't propose anything for a need a builder already has work for.
   - A proposal nobody answers in two days counts as ignored.
 - **The mayor's word carries weight.** The report, your answer, and whether an agreed proposal got
   done reach every citizen at once, not by gossip. Other citizens take the mayor's view seriously.

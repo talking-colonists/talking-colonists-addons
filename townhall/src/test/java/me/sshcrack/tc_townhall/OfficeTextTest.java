@@ -82,6 +82,7 @@ class OfficeTextTest {
                 List.of("\"Healthy people\": not kept yet (still one citizen sick)"), proposal(Office.ProposalStatus.PENDING), "tc_tool");
         assertTrue(agenda.contains("propose to Steve that you upgrade the residence to level 2"));
         assertTrue(agenda.contains("call tc_tool"));
+        assertTrue(agenda.contains("Any building work for homes counts: a new or upgraded residence. It is kept once a builder starts on it."));
         assertTrue(agenda.contains("let the frustration show"));
         assertTrue(agenda.length() <= OfficeText.MAX_AGENDA_CHARS);
         assertFalse(OfficeText.agenda("Steve", List.of(), List.of(), null, "tc_tool").contains("tc_tool"));
@@ -96,10 +97,23 @@ class OfficeTextTest {
         proposal.status = Office.ProposalStatus.FAILED;
         assertTrue(OfficeText.answered("Remy", proposal).startsWith("Steve agreed to"));
         proposal.status = Office.ProposalStatus.BROKEN;
-        assertEquals("Steve agreed with Mayor Remy on day 5 to upgrade the residence to level 2, but never did.",
+        assertEquals("Steve agreed with Mayor Remy on day 5 to upgrade the residence to level 2, but no building work for it was ever ordered.",
                 OfficeText.outcome("Remy", proposal));
         assertEquals("Mayor Remy gave Steve the mayor's report. The most pressing problem: one citizen is sick. The mayor asked Steve to upgrade the residence to level 2.",
                 OfficeText.statement("Remy", "Steve", "one citizen is sick", proposal(Office.ProposalStatus.PENDING)));
+    }
+
+    @Test
+    void aKeptProposalNamesTheBuilderAtWork() {
+        Office.Proposal proposal = proposal(Office.ProposalStatus.DONE);
+        proposal.building = "barracks";
+        proposal.builder = "Anna";
+        assertEquals("Anna the builder is now at work on the barracks, as Steve agreed with Mayor Remy.", OfficeText.outcome("Remy", proposal));
+        assertTrue(OfficeText.proposalLine(proposal).endsWith("(Steve agreed; Anna the builder took it on)"));
+        Need safety = Need.SAFETY;
+        proposal.need = safety.id();
+        assertEquals("Any building work for safety counts: a new or upgraded guard tower or barracks. It is kept once a builder starts on it.",
+                OfficeText.alternatives(proposal));
     }
 
     @Test
@@ -108,7 +122,7 @@ class OfficeTextTest {
         assertEquals("When the mayor asked Steve: upgrade the residence to level 2 (Steve turned it down on day 5).",
                 OfficeText.playerRecord("Steve", List.of(proposal(Office.ProposalStatus.REFUSED))));
         String record = OfficeText.record("Remy", List.of("\"More homes\": kept"), List.of(proposal(Office.ProposalStatus.DONE)));
-        assertEquals("Remy's promises: \"More homes\": kept. The mayor's proposals to the players: upgrade the residence to level 2 (Steve agreed; done).",
+        assertEquals("Remy's promises: \"More homes\": kept. The mayor's proposals to the players: upgrade the residence to level 2 (Steve agreed; the work came along).",
                 record);
         String directive = ElectionText.voteDirective(List.of(new ElectionText.CandidateBrief("Remy", null, null, "the sitting mayor. " + record)));
         assertTrue(directive.contains("Their record: the sitting mayor."));

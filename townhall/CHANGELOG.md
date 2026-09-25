@@ -4,7 +4,7 @@
 
 - The mayor's office. The winner wears the Mayor's Hat (a citizen on their head; a citizen brings a player mayor theirs).
   - The mayor's campaign promises are measured against the colony.
-  - A citizen mayor brings a colony member a written report once a day, talks it through, and makes a proposal: a hut upgrade (agreeing places the work order) or a new hut (agreeing is a promise to place it). Answer in the conversation or at the Mayor's desk in the Ballot Box window.
+  - A citizen mayor brings a colony member a written report once a day, talks it through, and makes a proposal: a hut upgrade (agreeing places the work order) or a new hut (agreeing is a promise to place it; the mayor then orders the build). Any building work for the same need counts, and a proposal is kept once a builder is at work on it. Answer in the conversation or at the Mayor's desk in the Ballot Box window.
   - Reports, answers and outcomes reach every citizen at once.
   - A sitting citizen mayor stands for re-election, and voters see everyone's record.
   - `/townhall report` for operators.

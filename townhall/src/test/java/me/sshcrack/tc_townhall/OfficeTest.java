@@ -53,7 +53,7 @@ class OfficeTest {
         assertNotNull(proposal);
         assertEquals(Office.ProposalKind.BUILD, proposal.kind);
         assertEquals("build a hospital", proposal.what());
-        assertEquals("have the builder build the guard tower hut that stands ready",
+        assertEquals("have a builder build the guard tower that stands ready",
                 Office.choose(needs(Need.SAFETY, 2), Map.of(), List.of(new Office.Hut("guardtower", 9L, 0, 5, false)), List.of(), 3).what());
     }
 
@@ -67,6 +67,54 @@ class OfficeTest {
         List<Office.Proposal> history = new ArrayList<>(List.of(refused));
         assertNull(Office.choose(needs(Need.HEALTH, 1), Map.of(), List.of(), history, 5));
         assertNotNull(Office.choose(needs(Need.HEALTH, 1), Map.of(), List.of(), history, 4 + Office.RETRY_DAYS));
+    }
+
+    @Test
+    void aNeedABuilderAlreadyHasWorkForIsLeftAlone() {
+        List<Office.Hut> huts = List.of(
+                new Office.Hut("guardtower", 1L, 1, 5, true),
+                new Office.Hut("guardtower", 2L, 1, 5, false));
+        assertNull(Office.choose(needs(Need.SAFETY, 3), Map.of(), huts, List.of(), 5), "the first tower is being worked on");
+    }
+
+    @Test
+    void anAcceptedProposalIsKeptOnceABuilderStartsAnyWorkThatHelps() {
+        List<Office.Hut> before = List.of(new Office.Hut("guardtower", 1L, 1, 5, false));
+        Office.Proposal proposal = new Office.Proposal();
+        proposal.need = Need.SAFETY.id();
+        proposal.building = "guardtower";
+        proposal.pos = 1L;
+        proposal.level = 1;
+        proposal.status = Office.ProposalStatus.ACCEPTED;
+        proposal.answeredDay = 10;
+        proposal.levels = Office.levels(Need.SAFETY, before);
+
+        // Ordered, but no builder yet: keep waiting, however long the building itself takes.
+        List<Office.Hut> ordered = List.of(new Office.Hut("guardtower", 1L, 1, 5, true));
+        assertEquals(Office.Step.WAITING, Office.followUp(proposal, Need.SAFETY, ordered, 10 + Office.START_DAYS + 1));
+        assertEquals(Office.Step.STALLED, Office.followUp(proposal, Need.SAFETY, ordered, 10 + Office.WAIT_DAYS + 1));
+
+        // A builder took on a new barracks instead of the proposed tower: that counts too.
+        List<Office.Hut> barracks = List.of(new Office.Hut("guardtower", 1L, 1, 5, false),
+                new Office.Hut("barracks", 5L, 0, 5, true, "Anna"));
+        assertEquals(Office.Step.STARTED, Office.followUp(proposal, Need.SAFETY, barracks, 11));
+        assertEquals("barracks", proposal.building);
+        assertEquals("Anna", proposal.builder);
+    }
+
+    @Test
+    void anAcceptedProposalWithoutAnyWorkOrderedIsBrokenAfterAWhile() {
+        Office.Proposal proposal = new Office.Proposal();
+        proposal.need = Need.HEALTH.id();
+        proposal.kind = Office.ProposalKind.BUILD;
+        proposal.building = "hospital";
+        proposal.status = Office.ProposalStatus.ACCEPTED;
+        proposal.answeredDay = 3;
+        assertEquals(Office.Step.WAITING, Office.followUp(proposal, Need.HEALTH, List.of(), 3 + Office.START_DAYS));
+        assertEquals(Office.Step.BROKEN, Office.followUp(proposal, Need.HEALTH, List.of(), 3 + Office.START_DAYS + 1));
+        // A hospital someone else already built up before counts once it gains a level.
+        List<Office.Hut> built = List.of(new Office.Hut("hospital", 7L, 1, 5, false));
+        assertEquals(Office.Step.STARTED, Office.followUp(proposal, Need.HEALTH, built, 5));
     }
 
     @Test

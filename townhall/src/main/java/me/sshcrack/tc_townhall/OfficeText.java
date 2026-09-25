@@ -103,7 +103,8 @@ public final class OfficeText {
             pages.add(promises.toString().strip());
         }
         if (proposal != null) {
-            pages.add("My proposal\n\nI propose we " + proposal.what() + ".\n\nTell me yes or no, or answer at the Ballot Box.\n\n" + mayor);
+            pages.add("My proposal\n\nI propose we " + proposal.what() + ". " + alternatives(proposal)
+                    + "\n\nTell me yes or no, or answer at the Ballot Box.\n\n" + mayor);
         } else {
             pages.set(pages.size() - 1, pages.get(pages.size() - 1) + "\n\n" + mayor);
         }
@@ -131,7 +132,8 @@ public final class OfficeText {
         }
         if (proposal != null) {
             text.append("Then propose to ").append(player).append(" that you ").append(proposal.what())
-                    .append(", and why it would help. Ask for a clear yes or no. When they clearly agree or refuse, call ")
+                    .append(", and why it would help. ").append(alternatives(proposal))
+                    .append(" Ask for a clear yes or no. When they clearly agree or refuse, call ")
                     .append(tool).append(" with their answer; if they are unsure, leave it, they can answer at the Ballot Box later.\n");
         }
         text.append("Keep it short, like a word in passing: 2 or 3 sentences, then listen.");
@@ -162,16 +164,34 @@ public final class OfficeText {
     /** What the colony hears when an accepted proposal is done or was not kept. */
     public static String outcome(String mayor, Office.Proposal proposal) {
         String text = switch (proposal.status) {
-            case DONE -> proposal.kind == Office.ProposalKind.BUILD
-                    ? "The new " + Office.buildingName(proposal.building) + " is built, as " + proposal.player + " agreed with Mayor " + mayor + "."
-                    : "The " + Office.buildingName(proposal.building) + " was upgraded, as " + proposal.player + " agreed with Mayor " + mayor + ".";
+            case DONE -> (proposal.builder.isBlank()
+                    ? "Work on the " + Office.buildingName(proposal.building) + " has come along"
+                    : proposal.builder + " the builder is now at work on the " + Office.buildingName(proposal.building))
+                    + ", as " + proposal.player + " agreed with Mayor " + mayor + ".";
             case BROKEN -> proposal.player + " agreed with Mayor " + mayor + " on day " + proposal.answeredDay + " to "
-                    + proposal.what() + ", but never did.";
+                    + proposal.what() + ", but no building work for it was ever ordered.";
+            case FAILED -> proposal.player + " agreed with Mayor " + mayor + " to " + proposal.what()
+                    + ", but no builder has been free to take the work on.";
             case IGNORED -> proposal.player.isEmpty() ? "Nobody answered Mayor " + mayor + "'s proposal to " + proposal.what() + "."
                     : proposal.player + " never answered Mayor " + mayor + "'s proposal to " + proposal.what() + ".";
             default -> "";
         };
         return ElectionText.cut(text, ElectionText.MAX_BROADCAST_CHARS);
+    }
+
+    /**
+     * "Any building work for safety counts: a new or upgraded guard tower or barracks. It is kept once a
+     * builder starts on it." Building takes days; the mayor only asks that the work begins.
+     */
+    public static String alternatives(Office.Proposal proposal) {
+        Need need = Need.byId(proposal.need);
+        if (need == null || need.buildings().isEmpty()) return "";
+        List<String> names = new ArrayList<>();
+        for (String building : need.buildings()) names.add(Office.buildingName(building));
+        String kinds = names.size() == 1 ? names.get(0)
+                : String.join(", ", names.subList(0, names.size() - 1)) + " or " + names.get(names.size() - 1);
+        return "Any building work for " + need.label() + " counts: a new or upgraded " + kinds
+                + ". It is kept once a builder starts on it.";
     }
 
     // ── Track record ────────────────────────────────────────────────────────
@@ -181,13 +201,14 @@ public final class OfficeText {
         String status = switch (proposal.status) {
             case PENDING -> "waiting for an answer since day " + proposal.madeDay;
             case ACCEPTED -> proposal.placedDay >= 0
-                    ? proposal.player + " agreed and placed the hut on day " + proposal.placedDay + "; the builders are on it"
-                    : proposal.player + " agreed on day " + proposal.answeredDay + "; not done yet";
+                    ? proposal.player + " agreed and placed the hut on day " + proposal.placedDay + "; waiting for a builder to start"
+                    : proposal.player + " agreed on day " + proposal.answeredDay + "; no builder has started yet";
             case REFUSED -> proposal.player + " turned it down on day " + proposal.answeredDay;
             case IGNORED -> "never answered";
-            case DONE -> proposal.player + " agreed; done";
+            case DONE -> proposal.player + " agreed; " + (proposal.builder.isBlank() ? "the work came along"
+                    : proposal.builder + " the builder took it on");
             case BROKEN -> proposal.player + " agreed on day " + proposal.answeredDay + " but never did it";
-            case FAILED -> proposal.player + " agreed, but the builder could not take it on";
+            case FAILED -> proposal.player + " agreed, but no builder could take it on";
         };
         return proposal.what() + " (" + status + ")";
     }
