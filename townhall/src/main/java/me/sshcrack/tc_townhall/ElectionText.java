@@ -20,8 +20,15 @@ public final class ElectionText {
     /** How citizens refer to where the news comes from. */
     public static final String SOURCE_NAME = "the town hall";
 
-    /** A candidate as one voter knows them. {@code heardPlatform} is null when the voter never heard it. */
-    public record CandidateBrief(String name, @Nullable String heardPlatform, @Nullable String feelings) {
+    /**
+     * A candidate as one voter knows them. {@code heardPlatform} is null when the voter never heard it;
+     * {@code record} is what they did in office or as a player the mayor asked, or null.
+     */
+    public record CandidateBrief(String name, @Nullable String heardPlatform, @Nullable String feelings,
+                                 @Nullable String record) {
+        public CandidateBrief(String name, @Nullable String heardPlatform, @Nullable String feelings) {
+            this(name, heardPlatform, feelings, null);
+        }
     }
 
     /** A citizen's campaign, as they wrote it. */
@@ -103,10 +110,11 @@ public final class ElectionText {
                     ? "you never heard what they stand for."
                     : "you heard this: " + cut(candidate.heardPlatform().strip(), MAX_BROADCAST_CHARS));
             if (candidate.feelings() != null) text.append(" About them: ").append(candidate.feelings());
+            if (candidate.record() != null) text.append(" Their record: ").append(candidate.record());
             text.append('\n');
         }
         text.append("\nVote for the candidate you honestly prefer, as yourself: think of your own needs and worries, ")
-                .append("what you heard them promise, and how you feel about them. You may abstain if none of them ")
+                .append("what you heard them promise, what they actually did, and how you feel about them. You may abstain if none of them ")
                 .append("deserves your vote. Give your reason in one sentence of at most 150 characters, in your own ")
                 .append("voice, as you would tell a neighbour.");
         return text.toString();
@@ -222,7 +230,8 @@ public final class ElectionText {
     /** Told to a citizen who is the mayor. */
     public static String mayorInstruction(int sinceDay) {
         return "You are the colony's elected mayor since day " + sinceDay + ". You take the office seriously and "
-                + "talk about the colony's future and your plans like a mayor would, without boasting.";
+                + "talk about the colony's future and your plans like a mayor would, without boasting. You wear the "
+                + "mayor's hat, a black top hat with a gold band.";
     }
 
     static String join(List<String> names) {

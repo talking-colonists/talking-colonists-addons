@@ -7,7 +7,7 @@
     <text id="title" size="400 13" pos="0 13" color="black" textalign="MIDDLE"/>
     <text id="status" size="340 20" pos="30 26" color="#555555" textscale="0.8" textalign="MIDDLE" wrap="true"/>
 
-    <text size="180 10" pos="22 48" color="black" label="$(tc_townhall.gui.ballot_box.candidates)"/>
+    <text id="candidatesTitle" size="180 10" pos="22 48" color="black" label="$(tc_townhall.gui.ballot_box.candidates)"/>
     <text id="nobody" size="170 40" pos="25 70" color="#555555" textscale="0.8" wrap="true" label="$(tc_townhall.gui.ballot_box.nobody)"/>
     <list id="candidates" size="180 172" pos="20 60">
         <box size="100% 58" linewidth="1">
@@ -18,6 +18,19 @@
             <text id="votes" size="44 8" pos="130 48" color="#333333" textscale="0.6"/>
         </box>
     </list>
+
+    <view id="office" size="180 184" pos="20 48">
+        <text size="180 10" pos="2 0" color="black" label="$(tc_townhall.gui.ballot_box.office)"/>
+        <text id="promises" size="176 70" pos="2 12" color="#333333" textscale="0.6" wrap="true"/>
+        <text id="proposal" size="176 26" pos="2 84" color="#6b3a12" textscale="0.7" wrap="true"/>
+        <button id="accept" size="86 17" pos="2 112" textcolor="black"
+                source="minecolonies:textures/gui/builderhut/builder_button_medium.png"
+                label="$(tc_townhall.gui.ballot_box.accept)"/>
+        <button id="refuse" size="86 17" pos="92 112" textcolor="black"
+                source="minecolonies:textures/gui/builderhut/builder_button_medium.png"
+                label="$(tc_townhall.gui.ballot_box.refuse)"/>
+        <text id="earlier" size="176 50" pos="2 134" color="#555555" textscale="0.55" wrap="true"/>
+    </view>
 
     <view id="form" size="172 182" pos="210 48">
         <text id="formTitle" size="172 10" pos="0 0" color="black" label="$(tc_townhall.gui.ballot_box.stand_title)"/>
