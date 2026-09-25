@@ -12,11 +12,11 @@ public enum Need {
     // What helps, from MineColonies' happiness rules (docs/minecolonies-mechanics.md in the main repo):
     // a home counts fully from level 3; "security" only counts guards, and a guard tower always holds
     // one guard whatever its level, so only barracks and barracks towers gain guards by upgrading.
-    HOUSING("housing", "homelessness", "homes", "without a proper home", List.of("residence"), List.of("residence")),
+    HOUSING("housing", "homelessness", "homes", "homeless or in a home below level 3", List.of("residence"), List.of("residence")),
     WORK("work", "unemployment", "jobs", "without work", List.of(), List.of()),
-    FOOD("food", "food", "food", "poorly fed", List.of("cook", "kitchen", "farmer"), List.of("cook", "kitchen", "farmer")),
+    FOOD("food", "food", "food", "tired of plain, samey meals", List.of("cook", "kitchen", "farmer"), List.of("cook", "kitchen", "farmer")),
     HEALTH("health", "health", "health care", "sick", List.of("hospital"), List.of("hospital")),
-    SAFETY("safety", "security", "safety", "feeling unsafe", List.of("guardtower", "barracks"), List.of("barracks", "barrackstower")),
+    SAFETY("safety", "security", "safety", "feeling unsafe with too few guards", List.of("guardtower", "barracks"), List.of("barracks", "barrackstower")),
     SUPPLIES("supplies", "idleatjob", "work supplies", "stuck at work without what they need", List.of("warehouse", "deliveryman"),
             List.of("warehouse", "deliveryman"));
 
@@ -51,7 +51,7 @@ public enum Need {
         return label;
     }
 
-    /** How the affected citizens are, e.g. "without a proper home". */
+    /** How the affected citizens are, e.g. "homeless or in a home below level 3". */
     public String affected() {
         return affected;
     }
@@ -83,7 +83,7 @@ public enum Need {
         return null;
     }
 
-    /** "3 citizens are without a proper home", "one citizen is sick". */
+    /** "3 citizens are homeless or in a home below level 3", "one citizen is sick". */
     public String describe(int count) {
         return (count == 1 ? "one citizen is " : count + " citizens are ") + affected;
     }

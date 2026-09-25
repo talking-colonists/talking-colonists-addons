@@ -61,7 +61,7 @@ public final class OfficeText {
         return promises;
     }
 
-    /** "\"a roof over every head\": kept (3 citizens were without a proper home when the term began, none now)". */
+    /** "\"a roof over every head\": kept (3 citizens were homeless or in a home below level 3 when the term began, none now)". */
     public static String promiseLine(Office.Promise promise, int now) {
         Need need = Need.byId(promise.need);
         String head = "\"" + promise.summary + "\"";
@@ -82,7 +82,7 @@ public final class OfficeText {
 
     // ── Reports ─────────────────────────────────────────────────────────────
 
-    /** "3 citizens are without a proper home, since day 4 (reported twice already)". */
+    /** "3 citizens are homeless or in a home below level 3, since day 4 (reported twice already)". */
     public static String needLine(Need need, int count, int sinceDay, int reported) {
         String line = need.describe(count) + ", since day " + sinceDay;
         if (reported <= 0) return line;

@@ -54,18 +54,18 @@ class OfficeTextTest {
         promise.need = Need.HOUSING.id();
         promise.summary = "A roof over every head";
         promise.before = 3;
-        assertEquals("\"A roof over every head\": kept (3 citizens were without a proper home when the term began, none now)",
+        assertEquals("\"A roof over every head\": kept (3 citizens were homeless or in a home below level 3 when the term began, none now)",
                 OfficeText.promiseLine(promise, 0));
-        assertEquals("\"A roof over every head\": partly kept (3 citizens were without a proper home when the term began, 1 now)",
+        assertEquals("\"A roof over every head\": partly kept (3 citizens were homeless or in a home below level 3 when the term began, 1 now)",
                 OfficeText.promiseLine(promise, 1));
-        assertEquals("\"A roof over every head\": not kept yet (still 3 citizens without a proper home)", OfficeText.promiseLine(promise, 3));
+        assertEquals("\"A roof over every head\": not kept yet (still 3 citizens homeless or in a home below level 3)", OfficeText.promiseLine(promise, 3));
         promise.before = 0;
-        assertEquals("\"A roof over every head\": kept so far (no citizen is without a proper home)", OfficeText.promiseLine(promise, 0));
+        assertEquals("\"A roof over every head\": kept so far (no citizen is homeless or in a home below level 3)", OfficeText.promiseLine(promise, 0));
     }
 
     @Test
     void theReportCountsHowOftenAProblemWasReported() {
-        assertEquals("3 citizens are without a proper home, since day 4", OfficeText.needLine(Need.HOUSING, 3, 4, 0));
+        assertEquals("3 citizens are homeless or in a home below level 3, since day 4", OfficeText.needLine(Need.HOUSING, 3, 4, 0));
         assertEquals("one citizen is sick, since day 2 (reported twice already)", OfficeText.needLine(Need.HEALTH, 1, 2, 2));
         List<String> pages = OfficeText.reportPages("Oakvale", "Remy", 6, List.of("one citizen is sick, since day 2"), List.of(),
                 proposal(Office.ProposalStatus.PENDING));
