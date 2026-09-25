@@ -52,10 +52,13 @@ final class Checklist {
                     new Button("Get a notice", "/playtest notice", "A lectern, a bell and signed notices"),
                     new Button("Replies now", "/noticeboard rush", "Citizens write their replies within seconds"))),
             new Section("tc_townhall", "Town Hall",
-                    "Place the Ballot Box in the colony and right-click it to stand for mayor, give a speech and watch the votes. Place the Suggestion Box and right-click it to read the notes.", List.of(
+                    "Place the Ballot Box in the colony and right-click it to stand for mayor, give a speech and watch the votes. Place the Suggestion Box and right-click it to read the notes. "
+                            + "A citizen mayor wears the top hat, brings a daily report and proposes building work; answer by voice or at the Mayor's desk in the Ballot Box.", List.of(
                     new Button("Get a campaign", "/playtest townhall", "A Ballot Box, a Suggestion Box and a campaign book"),
                     new Button("Vote now", "/townhall rush", "The campaign ends now: a rival stands, then citizens vote"),
-                    new Button("Notes now", "/townhall notes", "Unhappy citizens drop notes in the suggestion box now"))));
+                    new Button("Notes now", "/townhall notes", "Unhappy citizens drop notes in the suggestion box now"),
+                    new Button("Appoint mayor", "/townhall appoint", "The nearest citizen becomes mayor right away"),
+                    new Button("Report now", "/townhall report", "The citizen mayor brings you the report and a proposal now"))));
 
     private Checklist() {
     }
