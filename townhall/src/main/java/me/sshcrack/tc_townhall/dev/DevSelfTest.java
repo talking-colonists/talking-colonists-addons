@@ -4,6 +4,7 @@ import com.minecolonies.api.colony.ICitizenData;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.IColonyManager;
 import com.mojang.authlib.GameProfile;
+import me.sshcrack.mc_talking.api.guide.AddonGuideService;
 import me.sshcrack.tc_townhall.Elections;
 import me.sshcrack.tc_townhall.TownHall;
 import me.sshcrack.tc_townhall.shared.book.WrittenBooks;
@@ -58,6 +59,8 @@ public final class DevSelfTest {
     }
 
     private static void start(MinecraftServer server) {
+        require(AddonGuideService.guides().stream().anyMatch(guide -> guide.id().equals(TownHall.MOD_ID + ":guide")),
+                "the Town Hall chapter is in the Colony Handbook");
         ServerLevel level = server.overworld();
         BlockPos center = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, level.getSharedSpawnPos());
         ServerPlayer candidate = FakePlayerFactory.get(level, CANDIDATE);
