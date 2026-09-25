@@ -402,7 +402,7 @@ public final class MayorsOffice {
         if (player == null) return false;
         boolean ordered = false;
         for (Office.Hut hut : huts) {
-            if (hut.level() > 0 || hut.busy() || !need.buildings().contains(hut.type())) continue;
+            if (hut.level() > 0 || hut.busy() || !need.helps(hut.type(), 0)) continue;
             IBuilding building = colony.getServerBuildingManager().getBuilding(BlockPos.of(hut.pos()));
             if (building == null) continue;
             building.requestUpgrade(player, BlockPos.ZERO);

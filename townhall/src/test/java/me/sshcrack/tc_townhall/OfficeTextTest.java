@@ -112,7 +112,7 @@ class OfficeTextTest {
         assertTrue(OfficeText.proposalLine(proposal).endsWith("(Steve agreed; Anna the builder took it on)"));
         Need safety = Need.SAFETY;
         proposal.need = safety.id();
-        assertEquals("Any building work for safety counts: a new or upgraded guard tower or barracks. It is kept once a builder starts on it.",
+        assertEquals("Any building work for safety counts: a new guard tower or barracks, or an upgraded barracks or barracks tower. It is kept once a builder starts on it.",
                 OfficeText.alternatives(proposal));
     }
 

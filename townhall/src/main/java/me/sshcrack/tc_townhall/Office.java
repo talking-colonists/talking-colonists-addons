@@ -127,6 +127,7 @@ public final class Office {
             case "cook" -> "restaurant";
             case "farmer" -> "farm";
             case "guardtower" -> "guard tower";
+            case "barrackstower" -> "barracks tower";
             case "deliveryman" -> "courier's hut";
             case "townhall" -> "town hall";
             default -> type;
@@ -139,8 +140,8 @@ public final class Office {
 
     /**
      * What the mayor proposes next, or null: for the need that affects the most citizens (the oldest
-     * first on a tie), the lowest hut that helps and can be upgraded, else a new hut when the colony
-     * has none of the kind. Needs refused or ignored recently, and needs a builder already has work for,
+     * first on a tie), the lowest hut whose next level helps (a placed, unbuilt one first), else one
+     * more hut of the kind. Needs refused or ignored recently, and needs a builder already has work for,
      * are left alone for a while.
      */
     public static @Nullable Proposal choose(Map<Need, Integer> counts, Map<String, Integer> since, List<Hut> huts,
@@ -151,13 +152,11 @@ public final class Office {
                 .thenComparingInt(need -> since.getOrDefault(need.id(), day)));
         for (Need need : needs) {
             if (recentlyTurnedDown(need, history, day)) continue;
-            if (huts.stream().anyMatch(hut -> hut.busy() && need.buildings().contains(hut.type()))) continue; // under way
+            if (huts.stream().anyMatch(hut -> hut.busy() && need.helps(hut.type(), hut.level()))) continue; // under way
             Hut best = null;
-            boolean any = false;
             for (Hut hut : huts) {
-                if (!need.buildings().contains(hut.type())) continue;
-                any = true;
-                if (hut.busy() || hut.level() >= hut.maxLevel()) continue;
+                if (hut.busy() || hut.level() >= hut.maxLevel() || !need.helps(hut.type(), hut.level())) continue;
+                // A placed hut nobody built yet comes first, then the lowest that grows.
                 if (best == null || hut.level() < best.level()) best = hut;
             }
             Proposal proposal = new Proposal();
@@ -170,36 +169,36 @@ public final class Office {
                 proposal.level = best.level();
                 return proposal;
             }
-            if (!any) {
-                proposal.kind = ProposalKind.BUILD;
-                proposal.building = need.buildings().get(0);
-                return proposal;
-            }
+            // Nothing that helps can grow: another hut of the kind, e.g. one more guard tower for one more guard.
+            proposal.kind = ProposalKind.BUILD;
+            proposal.building = need.buildings().get(0);
+            return proposal;
         }
         return null;
     }
 
-    /** The levels of the huts that help with {@code need}, to compare against later. */
+    /** The levels of the huts the need concerns, to compare against later. */
     public static Map<String, Integer> levels(Need need, List<Hut> huts) {
         Map<String, Integer> levels = new HashMap<>();
         for (Hut hut : huts) {
-            if (need.buildings().contains(hut.type())) levels.put(Long.toString(hut.pos()), hut.level());
+            if (need.concerns(hut.type())) levels.put(Long.toString(hut.pos()), hut.level());
         }
         return levels;
     }
 
     /**
      * How an accepted proposal is going. Any building work that helps with its need counts, not only the
-     * hut proposed: a builder at work on it, or a hut of the kind with a higher level than at acceptance.
-     * On {@link Step#STARTED} the proposal names the hut and the builder.
+     * hut proposed: a builder at work on a new hut or a useful upgrade, or such a hut now a level higher
+     * than at acceptance. On {@link Step#STARTED} the proposal names the hut and the builder.
      */
     public static Step followUp(Proposal proposal, Need need, List<Hut> huts, int day) {
         boolean ordered = false;
         for (Hut hut : huts) {
-            if (!need.buildings().contains(hut.type())) continue;
-            Integer before = proposal.levels.get(Long.toString(hut.pos()));
-            boolean higher = hut.level() > (before == null ? 0 : before);
-            if (hut.builder() != null || higher) {
+            if (!need.concerns(hut.type())) continue;
+            Integer known = proposal.levels.get(Long.toString(hut.pos()));
+            int before = known == null ? 0 : known;
+            if (!need.helps(hut.type(), before)) continue;
+            if (hut.builder() != null || hut.level() > before) {
                 proposal.building = hut.type();
                 proposal.pos = hut.pos();
                 proposal.builder = hut.builder() == null ? "" : hut.builder();

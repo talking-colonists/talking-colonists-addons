@@ -48,8 +48,11 @@ mayor is. A citizen mayor wears it on their head. A player mayor is brought one 
   - Agreeing to an upgrade places the builder's work order right away.
   - Agreeing to a new hut is a promise to place its hut block. Once you place it, the mayor orders the
     build in your name.
-  - Any building work for the same need keeps your word, not only the hut the mayor named. For
-    example, a new barracks counts for a proposed guard tower.
+  - Any building work for the same need keeps your word, not only the hut the mayor named. The
+    mayor follows MineColonies' rules for what helps. Citizens feel safe when there are enough
+    guards, and a guard tower always holds exactly one guard. So for safety a new guard tower
+    counts, and so does a barracks or barracks tower upgrade; a guard tower upgrade doesn't count.
+    Homes count fully from level 3.
   - Building takes days, so the mayor doesn't wait for it to finish. The proposal is kept once a
     builder is at work on it. If no work was ordered within four days, the colony remembers that
     you didn't keep your word. If work was ordered but no builder was free to start within eight

@@ -72,17 +72,28 @@ class OfficeTest {
     @Test
     void aNeedABuilderAlreadyHasWorkForIsLeftAlone() {
         List<Office.Hut> huts = List.of(
-                new Office.Hut("guardtower", 1L, 1, 5, true),
-                new Office.Hut("guardtower", 2L, 1, 5, false));
-        assertNull(Office.choose(needs(Need.SAFETY, 3), Map.of(), huts, List.of(), 5), "the first tower is being worked on");
+                new Office.Hut("barrackstower", 1L, 1, 5, true),
+                new Office.Hut("barrackstower", 2L, 1, 5, false));
+        assertNull(Office.choose(needs(Need.SAFETY, 3), Map.of(), huts, List.of(), 5), "a barracks tower is being worked on");
+    }
+
+    @Test
+    void aGuardTowerHoldsOneGuardSoSafetyAsksForAnotherTowerOrBiggerBarracks() {
+        List<Office.Hut> towers = List.of(new Office.Hut("guardtower", 1L, 1, 5, false));
+        Office.Proposal another = Office.choose(needs(Need.SAFETY, 3), Map.of(), towers, List.of(), 5);
+        assertNotNull(another);
+        assertEquals("build a guard tower", another.what());
+        List<Office.Hut> barracks = List.of(new Office.Hut("guardtower", 1L, 1, 5, false),
+                new Office.Hut("barrackstower", 2L, 2, 5, false));
+        assertEquals("upgrade the barracks tower to level 3", Office.choose(needs(Need.SAFETY, 3), Map.of(), barracks, List.of(), 5).what());
     }
 
     @Test
     void anAcceptedProposalIsKeptOnceABuilderStartsAnyWorkThatHelps() {
-        List<Office.Hut> before = List.of(new Office.Hut("guardtower", 1L, 1, 5, false));
+        List<Office.Hut> before = List.of(new Office.Hut("barrackstower", 1L, 1, 5, false));
         Office.Proposal proposal = new Office.Proposal();
         proposal.need = Need.SAFETY.id();
-        proposal.building = "guardtower";
+        proposal.building = "barrackstower";
         proposal.pos = 1L;
         proposal.level = 1;
         proposal.status = Office.ProposalStatus.ACCEPTED;
@@ -90,15 +101,20 @@ class OfficeTest {
         proposal.levels = Office.levels(Need.SAFETY, before);
 
         // Ordered, but no builder yet: keep waiting, however long the building itself takes.
-        List<Office.Hut> ordered = List.of(new Office.Hut("guardtower", 1L, 1, 5, true));
+        List<Office.Hut> ordered = List.of(new Office.Hut("barrackstower", 1L, 1, 5, true));
         assertEquals(Office.Step.WAITING, Office.followUp(proposal, Need.SAFETY, ordered, 10 + Office.START_DAYS + 1));
         assertEquals(Office.Step.STALLED, Office.followUp(proposal, Need.SAFETY, ordered, 10 + Office.WAIT_DAYS + 1));
 
-        // A builder took on a new barracks instead of the proposed tower: that counts too.
-        List<Office.Hut> barracks = List.of(new Office.Hut("guardtower", 1L, 1, 5, false),
-                new Office.Hut("barracks", 5L, 0, 5, true, "Anna"));
-        assertEquals(Office.Step.STARTED, Office.followUp(proposal, Need.SAFETY, barracks, 11));
-        assertEquals("barracks", proposal.building);
+        // Upgrading a guard tower adds no guard: it does not count.
+        List<Office.Hut> tower = List.of(new Office.Hut("barrackstower", 1L, 1, 5, false),
+                new Office.Hut("guardtower", 4L, 1, 5, true, "Anna"));
+        proposal.levels.put("4", 1);
+        assertEquals(Office.Step.WAITING, Office.followUp(proposal, Need.SAFETY, tower, 11));
+        // A builder took on a new guard tower instead of the proposed upgrade: that counts.
+        List<Office.Hut> newTower = List.of(new Office.Hut("barrackstower", 1L, 1, 5, false),
+                new Office.Hut("guardtower", 5L, 0, 5, true, "Anna"));
+        assertEquals(Office.Step.STARTED, Office.followUp(proposal, Need.SAFETY, newTower, 11));
+        assertEquals("guardtower", proposal.building);
         assertEquals("Anna", proposal.builder);
     }
 

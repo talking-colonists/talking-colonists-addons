@@ -180,18 +180,26 @@ public final class OfficeText {
     }
 
     /**
-     * "Any building work for safety counts: a new or upgraded guard tower or barracks. It is kept once a
-     * builder starts on it." Building takes days; the mayor only asks that the work begins.
+     * "Any building work for safety counts: a new guard tower or barracks, or an upgraded barracks or
+     * barracks tower. It is kept once a builder starts on it." Building takes days; the mayor only asks
+     * that the work begins.
      */
     public static String alternatives(Office.Proposal proposal) {
         Need need = Need.byId(proposal.need);
         if (need == null || need.buildings().isEmpty()) return "";
+        String built = names(need.buildings());
+        String upgraded = names(need.upgrades());
+        String kinds = built.equals(upgraded) ? "a new or upgraded " + built
+                : upgraded.isEmpty() ? "a new " + built : "a new " + built + ", or an upgraded " + upgraded;
+        return "Any building work for " + need.label() + " counts: " + kinds + ". It is kept once a builder starts on it.";
+    }
+
+    /** "guard tower or barracks", "restaurant, kitchen or farm". */
+    private static String names(List<String> types) {
         List<String> names = new ArrayList<>();
-        for (String building : need.buildings()) names.add(Office.buildingName(building));
-        String kinds = names.size() == 1 ? names.get(0)
-                : String.join(", ", names.subList(0, names.size() - 1)) + " or " + names.get(names.size() - 1);
-        return "Any building work for " + need.label() + " counts: a new or upgraded " + kinds
-                + ". It is kept once a builder starts on it.";
+        for (String type : types) names.add(Office.buildingName(type));
+        if (names.size() <= 1) return String.join("", names);
+        return String.join(", ", names.subList(0, names.size() - 1)) + " or " + names.get(names.size() - 1);
     }
 
     // ── Track record ────────────────────────────────────────────────────────
