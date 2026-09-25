@@ -37,7 +37,7 @@ final class Checklist {
                     "Every morning the teacher writes about yesterday; a citizen walks over and hands you a copy.", List.of(
                     new Button("Publish now", "/gazette publish", "Write an issue right away (uses one Gemini request)"))),
             new Section("tc_campfire", "Campfire Nights",
-                    "At dusk, idle citizens tell stories at the campfire. Stand close and chat to join in.", List.of(
+                    "At dusk, idle citizens tell stories at the campfire. Right-click the fire with an empty hand and speak, or chat, to join in.", List.of(
                     new Button("Start now", "/campfire start", "Gather idle citizens at the nearest campfire (uses Gemini Live)"),
                     new Button("Stop", "/campfire stop", "End the campfire night"))),
             new Section("tc_postal", "Postal Service",

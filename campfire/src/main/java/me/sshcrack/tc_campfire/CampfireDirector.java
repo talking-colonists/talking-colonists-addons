@@ -156,6 +156,14 @@ public final class CampfireDirector {
         return null;
     }
 
+    /** A player right-clicked {@code pos} with an empty hand: at a running campfire night, they speak up. */
+    boolean onUse(ServerPlayer player, BlockPos pos) {
+        for (Gathering gathering : active) {
+            if (gathering.level == player.level() && gathering.campfire.equals(pos)) return gathering.speakUp(player);
+        }
+        return false;
+    }
+
     /** Hands chat from a player near a running campfire night to the tellers. */
     boolean onChat(ServerPlayer player, String text) {
         for (Gathering gathering : active) {

@@ -21,7 +21,8 @@ import java.util.Map;
 /**
  * A scripted playtest for the headless scenario client ({@code scripts/scenario.sh}): once the
  * player is in the world it runs timed steps as that real player, so every ambient feature treats
- * it as a listener, then quits. Each step is logged as a speech-timeline mark, which the report
+ * it as a listener, then quits. A command starting with {@code chat:} is sent as a chat message.
+ * Each step is logged as a speech-timeline mark, which the report
  * prints between the voices. Enabled with {@code -Dtc_playtest.scenario=<name>}. Commands starting with
  * {@code client:} run on the client: {@code client:camera first|back|front}, {@code client:hud on|off},
  * {@code client:use} (right-click the block looked at), {@code client:close} (the open screen) and
@@ -37,8 +38,10 @@ final class PlaytestScenario {
             "campfire", List.of(
                     new Step(20, "day: standing in the colony", List.of("playtest home", "time set 6000")),
                     new Step(110, "dusk: campfire night starts", List.of("time set 12500", "campfire start")),
-                    new Step(290, "campfire stopped", List.of("campfire stop")),
-                    new Step(305, "scenario done", List.of())),
+                    new Step(200, "player speaks up at the fire",
+                            List.of("chat:Excuse me, can one of you tell me what lies beyond the hills to the east?")),
+                    new Step(320, "campfire stopped", List.of("campfire stop")),
+                    new Step(335, "scenario done", List.of())),
             // The mayor's hat on a citizen mayor and on the player, then the mayor's report.
             "mayor", List.of(
                     new Step(20, "day: standing in the colony", List.of("playtest home", "time set 6000", "weather clear")),
@@ -95,7 +98,8 @@ final class PlaytestScenario {
         next++;
         mark(step.mark());
         for (String command : step.commands()) {
-            if (command.startsWith("client:")) client(mc, command.substring("client:".length()));
+            if (command.startsWith("chat:")) mc.player.connection.sendChat(command.substring("chat:".length()));
+            else if (command.startsWith("client:")) client(mc, command.substring("client:".length()));
             else mc.player.connection.sendCommand(command);
         }
         if (next == steps.size()) {

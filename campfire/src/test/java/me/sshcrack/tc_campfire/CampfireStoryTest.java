@@ -63,4 +63,13 @@ class CampfireStoryTest {
         assertEquals("Anna and Ben told stories around the campfire; Ben began: \"Once upon a time.\"",
                 CampfireStory.newsLine(List.of("Anna", "Ben"), "Ben", "Ben: Once upon a time."));
     }
+
+    @Test
+    void aPlayerWhoSpeaksUpIsAnsweredFirst() {
+        String instruction = CampfireStory.answer("Steve", "  Tell us about the old mine!  ");
+        assertTrue(instruction.startsWith("Steve, standing with you at the campfire, spoke up"));
+        assertTrue(instruction.contains("\"Tell us about the old mine!\""));
+        assertTrue(instruction.contains("Answer Steve directly"));
+        assertTrue(CampfireStory.answer("Steve", "x".repeat(1000)).length() < 1000);
+    }
 }
