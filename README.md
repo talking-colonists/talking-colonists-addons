@@ -83,6 +83,8 @@ a town crier (the bell rings as usual).
 
 ## Town Hall
 
+Full guide: [docs/addons/townhall.md](docs/addons/townhall.md).
+
 Craft a Ballot Box (spruce planks around paper and an iron ingot), place it in your colony and
 right-click it. Its window shows the candidates with their slogans and plans, and lets you stand for
 mayor: type a slogan and what you will do. (Right-clicking the Town Hall block with a signed book works
