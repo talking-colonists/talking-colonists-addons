@@ -89,9 +89,13 @@ public final class DevSelfTest {
         require(office.accept(sender, carrierEntity, letter), "the carrier accepts the letter");
         require(letter.isEmpty(), "the letter was taken");
         require(office.store().inTransit(sender.getUUID()) == 1, "one letter on its way");
+        sent = office.store().letters().get(0);
+        require(office.isCarrying(sent), "the carrier walks the letter to the recipient");
         PostalService.LOGGER.info("TC_POSTAL_SELFTEST: letter to {} is on its way", recipient.getName());
         office.rush(sender.getUUID());
     }
+
+    private static PostStore.Letter sent;
 
     private static void check(MinecraftServer server) {
         PostOffice office = PostalService.office();
@@ -101,6 +105,7 @@ public final class DevSelfTest {
         PostStore.Mail mail = box.isEmpty() ? null : box.get(0);
         if (mail != null && !carrying) {
             require(!mail.from().equals("Post office"), "the letter was answered, not returned: " + mail.pages());
+            require(sent.carried, "the letter was handed to the recipient before they answered");
             PostalService.LOGGER.info("TC_POSTAL_SELFTEST: reply \"{}\" from {}: {}", mail.title(), mail.from(), String.join(" ", mail.pages()));
         }
         if (!carrying) {
