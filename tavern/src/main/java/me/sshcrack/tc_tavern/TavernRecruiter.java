@@ -100,6 +100,9 @@ public class TavernRecruiter {
                 List.of(
                         "The price drops in small steps, never below half, and changes at most three times a day.",
                         "Once they join, they remember the deal."));
+        Guides.introduce(MOD_ID + ":tavern_visitors", "tavern visitors",
+                "Tell them the visitors at the tavern can be talked to like anyone here, and that a good conversation may lower what they ask for joining the colony.",
+                MOD_ID + ":guide", (player, colony) -> !colony.getVisitorManager().getCivilianDataMap().isEmpty());
     }
 
     /** The visitor's haggling state, or null while no server runs. */

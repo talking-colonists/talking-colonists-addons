@@ -7,4 +7,4 @@
 ## 0.1.0
 
 - First version: sign a book and quill with a citizen's name as its title and hand it to the colony courier (or to the citizen). The citizen writes back in character, and the reply is brought to you by the courier (or the writer). The exchange becomes a memory of the citizen.
-- A chapter in Talking Colonists' Colony Handbook explains how to use it, and citizens know it too, so you can ask them (Talking Colonists versions with the handbook).
+- A chapter in Talking Colonists' Colony Handbook explains how to use it, and citizens know it too, so you can ask them. When it becomes relevant, a citizen walks up and tells you about it once (Talking Colonists versions with the handbook and introductions).
