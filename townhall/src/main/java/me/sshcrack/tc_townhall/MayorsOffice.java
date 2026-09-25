@@ -138,16 +138,22 @@ public final class MayorsOffice {
         return changed;
     }
 
-    /** The biggest needs right now, as the mayor reports them. */
-    List<String> needLines(String key, Elections.Mayor mayor) {
+    /** The biggest needs right now, the ones the mayor reports. */
+    private List<Need> topNeeds(String key) {
         Map<Need, Integer> needs = counts.getOrDefault(key, Map.of());
         List<Need> sorted = new ArrayList<>();
         for (Need need : Need.values()) {
             if (needs.getOrDefault(need, 0) > 0) sorted.add(need);
         }
         sorted.sort(Comparator.comparingInt((Need need) -> -needs.get(need)));
+        return sorted.subList(0, Math.min(MAX_REPORTED_NEEDS, sorted.size()));
+    }
+
+    /** The biggest needs right now, as the mayor reports them. */
+    List<String> needLines(String key, Elections.Mayor mayor) {
+        Map<Need, Integer> needs = counts.getOrDefault(key, Map.of());
         List<String> lines = new ArrayList<>();
-        for (Need need : sorted.subList(0, Math.min(MAX_REPORTED_NEEDS, sorted.size()))) {
+        for (Need need : topNeeds(key)) {
             lines.add(OfficeText.needLine(need, needs.get(need), mayor.needSince.getOrDefault(need.id(), mayor.sinceDay),
                     mayor.needReported.getOrDefault(need.id(), 0)));
         }
@@ -224,6 +230,7 @@ public final class MayorsOffice {
         ServerPlayer player = nearestMember(colony, entity);
         if (player == null) return false;
         Office.Proposal pending = mayor.proposal != null && mayor.proposal.status == Office.ProposalStatus.PENDING ? mayor.proposal : null;
+        List<Need> reported = topNeeds(key);
         List<String> needLines = needLines(key, mayor);
         if (needLines.isEmpty() && pending == null) {
             mayor.lastReportDay = day; // nothing to report today
@@ -241,9 +248,7 @@ public final class MayorsOffice {
                 delivered -> {
                     if (!delivered) return;
                     mayor.lastReportDay = day;
-                    for (Need need : Need.values()) {
-                        if (needs.getOrDefault(need, 0) > 0) mayor.needReported.merge(need.id(), 1, Integer::sum);
-                    }
+                    for (Need need : reported) mayor.needReported.merge(need.id(), 1, Integer::sum);
                     elections.save();
                     Need top = top(needs);
                     publish(colony, mayor, OfficeText.statement(mayor.name, playerName,
