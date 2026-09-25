@@ -119,6 +119,9 @@ public class TownHall {
                         "If you are the only candidate, the unhappiest citizen stands against you, so you can lose.",
                         "A new election can be called three days after the last one.",
                         "Operators: /townhall rush ends campaigns now, /townhall notes has citizens write notes now."));
+        Guides.introduce(MOD_ID + ":elections", "elections",
+                "Tell them they can stand for mayor: sign a book with their slogan as the title and their promises inside, right-click the Town Hall block with it and give a speech; then the colony votes.",
+                MOD_ID + ":guide", (player, colony) -> colony.getServerBuildingManager().hasTownHall());
     }
 
     /** What citizens know about the colony's politics: a running campaign, the mayor, and being the mayor. */

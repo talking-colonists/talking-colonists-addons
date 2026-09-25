@@ -98,6 +98,9 @@ public class NoticeBoard {
                 List.of(
                         "Taking the book down cancels the replies.",
                         "Operators: /noticeboard rush collects the waiting replies now."));
+        Guides.introduce(MOD_ID + ":notices", "the notice board",
+                "Tell them they can post a notice for the whole colony: put a signed book on a lectern, citizens spread the word, and some pin their replies into it.",
+                MOD_ID + ":guide", (player, colony) -> colony.getCitizenManager().getCurrentCitizenCount() >= 4);
     }
 
     /**

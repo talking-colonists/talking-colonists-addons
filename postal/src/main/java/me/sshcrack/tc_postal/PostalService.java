@@ -1,5 +1,6 @@
 package me.sshcrack.tc_postal;
 
+import com.minecolonies.api.colony.jobs.ModJobs;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import me.sshcrack.mc_talking.api.ApiFeature;
 import me.sshcrack.mc_talking.api.TalkingColonistsApi;
@@ -94,6 +95,10 @@ public class PostalService {
                         "The citizen remembers your letter and may bring it up when you talk.",
                         "Letters come back undelivered after three days, or if the citizen left the colony.",
                         "Operators: /mail rush delivers your letters now, /mail hands you the waiting replies."));
+        Guides.introduce(MOD_ID + ":letters", "letters",
+                "Tell them they can write to anyone here: sign a book and quill with the citizen's name as its title and give it to the courier, who carries it over, and the reply comes back to them.",
+                MOD_ID + ":guide", (player, colony) -> colony.getCitizenManager().getCitizens().stream()
+                        .anyMatch(data -> data.getJob() != null && data.getJob().getJobRegistryEntry() == ModJobs.delivery.get()));
     }
 
     private static void onInteract(PlayerInteractEvent.EntityInteract event) {
