@@ -20,8 +20,15 @@ public final class ElectionText {
     /** How citizens refer to where the news comes from. */
     public static final String SOURCE_NAME = "the town hall";
 
-    /** A candidate as one voter knows them. {@code heardPlatform} is null when the voter never heard it. */
-    public record CandidateBrief(String name, @Nullable String heardPlatform, @Nullable String feelings) {
+    /**
+     * A candidate as one voter knows them. {@code heardPlatform} is null when the voter never heard it;
+     * {@code record} is what they did in office or as a player the mayor asked, or null.
+     */
+    public record CandidateBrief(String name, @Nullable String heardPlatform, @Nullable String feelings,
+                                 @Nullable String record) {
+        public CandidateBrief(String name, @Nullable String heardPlatform, @Nullable String feelings) {
+            this(name, heardPlatform, feelings, null);
+        }
     }
 
     /** A citizen's campaign, as they wrote it. */
@@ -78,6 +85,34 @@ public final class ElectionText {
                 + "change for the colony, grounded in the real problems and wishes you know about. Plain text only.";
     }
 
+    /**
+     * What a citizen candidate is asked to say aloud as their campaign speech. {@code listener} is the
+     * player they walked up to, or null when they speak where they stand.
+     */
+    public static String rivalSpeech(String colonyName, String slogan, String platform, List<String> opponents,
+                                     boolean incumbent, @Nullable String listener) {
+        String who = listener == null ? "everyone around you" : listener + " and everyone around you";
+        return "You stand for mayor of " + colonyName + " against " + join(opponents) + (incumbent
+                ? ", as the sitting mayor seeking re-election." : ".")
+                + " Your slogan: \"" + slogan.strip() + "\". Your platform: " + platform.strip().replaceAll("\\s+", " ")
+                + (listener == null ? "" : " You just handed " + listener + " your campaign pamphlet.")
+                + "\nNow give your campaign speech aloud to " + who + ": 3 to 5 sentences in your own voice and manner. "
+                + "Say why you stand and what you will do, "
+                + (incumbent ? "stand by what you did in office, " : "")
+                + "and ask for their vote. Be persuasive but fair: never insult your opponents.";
+    }
+
+    /** A spoken line without the "Name: " the transcript may start with. */
+    public static String withoutSpeaker(String name, String transcript) {
+        String text = transcript.strip();
+        return text.startsWith(name + ":") ? text.substring(name.length() + 1).strip() : text;
+    }
+
+    /** The campaign pamphlet a citizen candidate hands over: slogan, platform and name. */
+    public static String pamphlet(String name, String slogan, String platform) {
+        return "\"" + slogan.strip() + "\"\n\n" + platform.strip() + "\n\nVote " + name + " for mayor!";
+    }
+
     public static JsonObject rivalSchema() {
         JsonObject properties = new JsonObject();
         properties.add("slogan", string("Your campaign slogan, at most 8 words"));
@@ -103,10 +138,11 @@ public final class ElectionText {
                     ? "you never heard what they stand for."
                     : "you heard this: " + cut(candidate.heardPlatform().strip(), MAX_BROADCAST_CHARS));
             if (candidate.feelings() != null) text.append(" About them: ").append(candidate.feelings());
+            if (candidate.record() != null) text.append(" Their record: ").append(candidate.record());
             text.append('\n');
         }
         text.append("\nVote for the candidate you honestly prefer, as yourself: think of your own needs and worries, ")
-                .append("what you heard them promise, and how you feel about them. You may abstain if none of them ")
+                .append("what you heard them promise, what they actually did, and how you feel about them. You may abstain if none of them ")
                 .append("deserves your vote. Give your reason in one sentence of at most 150 characters, in your own ")
                 .append("voice, as you would tell a neighbour.");
         return text.toString();
@@ -222,7 +258,8 @@ public final class ElectionText {
     /** Told to a citizen who is the mayor. */
     public static String mayorInstruction(int sinceDay) {
         return "You are the colony's elected mayor since day " + sinceDay + ". You take the office seriously and "
-                + "talk about the colony's future and your plans like a mayor would, without boasting.";
+                + "talk about the colony's future and your plans like a mayor would, without boasting. You wear the "
+                + "mayor's hat, a black top hat with a gold band.";
     }
 
     static String join(List<String> names) {

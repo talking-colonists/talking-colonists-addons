@@ -86,4 +86,20 @@ class ElectionTextTest {
         assertEquals("We need a bakery.", SuggestionText.clean(" \"We need a bakery.\" "));
         assertTrue(SuggestionText.clean("word ".repeat(100)).length() <= SuggestionText.MAX_NOTE_CHARS);
     }
+
+    @Test
+    void aCitizenCandidateGivesTheirSpeechAloud() {
+        String toSteve = ElectionText.rivalSpeech("Oakvale", "Homes first ", "More   houses.", List.of("Steve"), false, "Steve");
+        assertTrue(toSteve.startsWith("You stand for mayor of Oakvale against Steve. Your slogan: \"Homes first\". Your platform: More houses."));
+        assertTrue(toSteve.contains("You just handed Steve your campaign pamphlet."));
+        assertTrue(toSteve.contains("aloud to Steve and everyone around you"));
+        assertTrue(toSteve.contains("never insult your opponents"));
+        String incumbent = ElectionText.rivalSpeech("Oakvale", "Steady hands", "Keep going.", List.of("Steve", "Alex"), true, null);
+        assertTrue(incumbent.contains("as the sitting mayor seeking re-election"));
+        assertTrue(incumbent.contains("stand by what you did in office"));
+        assertTrue(incumbent.contains("aloud to everyone around you"));
+        assertEquals("Jobs first.", ElectionText.withoutSpeaker("Dalton E. Clerk", "Dalton E. Clerk: Jobs first. "));
+        assertEquals("Jobs first.", ElectionText.withoutSpeaker("Dalton E. Clerk", "Jobs first."));
+        assertEquals("\"Homes first\"\n\nMore houses.\n\nVote Remy for mayor!", ElectionText.pamphlet("Remy", "Homes first", "More houses."));
+    }
 }

@@ -40,6 +40,16 @@ public final class BallotView {
     public String mayor = "";
     public int mayorSinceDay;
     public String mayorResult = "";
+    /** The player looking is the mayor. */
+    public boolean youAreMayor;
+    /** The mayor's promises and how they are going. */
+    public List<String> promises = new ArrayList<>();
+    /** The mayor's open proposal, empty when there is none. */
+    public String proposal = "";
+    /** The player may answer the proposal here. */
+    public boolean canAnswer;
+    /** The mayor's earlier proposals and how they ended. */
+    public List<String> proposals = new ArrayList<>();
     /** Days until the next election can be called, 0 when it can be now. */
     public int nextElectionDays;
     public boolean member;

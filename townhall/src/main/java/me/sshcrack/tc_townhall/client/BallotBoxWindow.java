@@ -49,6 +49,8 @@ public final class BallotBoxWindow extends BOWindow {
         this.platformInput = findPaneOfTypeByID("platformInput", TextField.class);
         findPaneOfTypeByID("close", Button.class).setHandler(button -> close());
         findPaneOfTypeByID("stand", Button.class).setHandler(button -> stand());
+        findPaneOfTypeByID("accept", Button.class).setHandler(button -> BlockActions.send(pos, BallotBoxBlockEntity.ACCEPT, 0));
+        findPaneOfTypeByID("refuse", Button.class).setHandler(button -> BlockActions.send(pos, BallotBoxBlockEntity.REFUSE, 0));
         findPaneOfTypeByID("speak", Button.class).setHandler(button -> {
             BlockActions.send(pos, BallotBoxBlockEntity.SPEAK, 0);
             close();
@@ -158,7 +160,12 @@ public final class BallotBoxWindow extends BOWindow {
                 : inColony ? Component.translatable("tc_townhall.gui.ballot_box.title", view.colony)
                 : Component.translatable("tc_townhall.gui.ballot_box.no_colony"));
         text("status").setText(Component.literal(loaded && inColony ? view.status() : ""));
-        findPaneOfTypeByID("nobody", Text.class).setVisible(loaded && inColony && view.candidates.isEmpty());
+        boolean office = loaded && inColony && view.phase == BallotView.Phase.IDLE && !view.mayor.isEmpty();
+        findPaneOfTypeByID("nobody", Text.class).setVisible(loaded && inColony && view.candidates.isEmpty() && !office);
+        findPaneByID("candidatesTitle").setVisible(!office);
+        candidates.setVisible(!office);
+        findPaneOfTypeByID("office", View.class).setVisible(office);
+        if (office) renderOffice();
 
         boolean voting = view.phase == BallotView.Phase.VOTING;
         findPaneOfTypeByID("results", View.class).setVisible(voting);
@@ -174,6 +181,26 @@ public final class BallotBoxWindow extends BOWindow {
 
         candidates.refreshElementPanes();
         reasons.refreshElementPanes();
+    }
+
+    /** The mayor's desk: their promises, the open proposal to answer, and earlier ones. */
+    private void renderOffice() {
+        StringBuilder promises = new StringBuilder(Component.translatable("tc_townhall.gui.ballot_box.promises").getString()).append(":\n");
+        if (view.promises.isEmpty()) promises.append(Component.translatable("tc_townhall.gui.ballot_box.no_promises").getString());
+        for (String promise : view.promises) promises.append("- ").append(promise).append('\n');
+        text("promises").setText(Component.literal(promises.toString().strip()));
+        text("proposal").setText(view.proposal.isEmpty() ? Component.translatable("tc_townhall.gui.ballot_box.no_proposal")
+                : Component.literal(view.proposal));
+        findPaneByID("accept").setVisible(view.canAnswer);
+        findPaneByID("refuse").setVisible(view.canAnswer);
+        StringBuilder earlier = new StringBuilder();
+        if (!view.proposals.isEmpty()) {
+            earlier.append(Component.translatable("tc_townhall.gui.ballot_box.earlier").getString()).append(":\n");
+            for (int i = view.proposals.size() - 1; i >= Math.max(0, view.proposals.size() - 3); i--) {
+                earlier.append("- ").append(view.proposals.get(i)).append('\n');
+            }
+        }
+        text("earlier").setText(Component.literal(earlier.toString().strip()));
     }
 
     private @Nullable Component hint() {
