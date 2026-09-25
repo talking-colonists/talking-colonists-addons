@@ -2,6 +2,7 @@ package me.sshcrack.tc_noticeboard;
 
 import me.sshcrack.mc_talking.api.ApiFeature;
 import me.sshcrack.mc_talking.api.TalkingColonistsApi;
+import me.sshcrack.tc_noticeboard.shared.guide.Guides;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -58,6 +59,7 @@ public class NoticeBoard {
             LOGGER.warn("Notice Board needs Talking Colonists 2.1 or newer (broadcasts, text generation); it stays inactive");
             return;
         }
+        registerGuide();
         /*? if forge {*/
         /*var bus = MinecraftForge.EVENT_BUS;
         bus.addListener((TickEvent.ServerTickEvent event) -> {
@@ -82,6 +84,20 @@ public class NoticeBoard {
         });
         bus.addListener(NoticeBoard::onRightClickBlock);
         bus.addListener((RegisterCommandsEvent event) -> NoticeCommands.register(event.getDispatcher()));
+    }
+
+    private static void registerGuide() {
+        Guides.register(MOD_ID + ":guide", "Notice Board",
+                "Post a signed book on a lectern in the colony: the citizens nearby read it and spread the word, and a few write replies that get pinned into the book.",
+                List.of(
+                        "Write a notice in a book and quill and sign it.",
+                        "Put it on a lectern inside your colony.",
+                        "Citizens near the board read it and pass it on. You hear when half the colony knows, and when everyone does.",
+                        "Come back a few minutes later and read the replies pinned into the book.",
+                        "To tell everyone at once, ring a bell in the colony while holding a signed book."),
+                List.of(
+                        "Taking the book down cancels the replies.",
+                        "Operators: /noticeboard rush collects the waiting replies now."));
     }
 
     /**

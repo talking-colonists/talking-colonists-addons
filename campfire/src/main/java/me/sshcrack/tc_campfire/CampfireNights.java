@@ -1,6 +1,7 @@
 package me.sshcrack.tc_campfire;
 
 import me.sshcrack.mc_talking.api.TalkingColonistsApi;
+import me.sshcrack.tc_campfire.shared.guide.Guides;
 import net.minecraft.server.MinecraftServer;
 /*? if forge {*/
 /*import net.minecraftforge.common.MinecraftForge;
@@ -23,6 +24,8 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 import me.sshcrack.tc_campfire.dev.DevSelfTest;
 
 /** Mod entry point: wires campfire nights to server start, stop, ticks, chat and commands. */
@@ -41,6 +44,7 @@ public class CampfireNights {
             LOGGER.warn("Campfire Nights needs Talking Colonists 2.1 or newer; it stays inactive");
             return;
         }
+        registerGuide();
         /*? if forge {*/
         /*var bus = MinecraftForge.EVENT_BUS;
         bus.addListener((TickEvent.ServerTickEvent event) -> {
@@ -64,6 +68,19 @@ public class CampfireNights {
             if (director != null) director.onChat(event.getPlayer(), event.getRawText());
         });
         bus.addListener((RegisterCommandsEvent event) -> CampfireCommand.register(event.getDispatcher()));
+    }
+
+    private static void registerGuide() {
+        Guides.register(MOD_ID + ":guide", "Campfire Nights",
+                "At dusk, idle citizens gather around a lit campfire in the colony, sit down and take turns telling stories: memories, colony news and tales from before they came.",
+                List.of(
+                        "Place a campfire inside your colony and keep it lit.",
+                        "Be near it at dusk: three to five idle citizens walk over and sit around it.",
+                        "Listen as they tell their stories in turn. Chat while you stand by the fire and they may answer you."),
+                List.of(
+                        "There is at most one campfire night per colony and day, and only while the citizens' voices are not all busy.",
+                        "The night becomes colony news, so the Colony Gazette may report it.",
+                        "Operators: /campfire start begins one at the nearest campfire, /campfire stop ends it."));
     }
 
     /** The running director, or null while no server runs. */
