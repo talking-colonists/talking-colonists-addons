@@ -53,7 +53,7 @@ final class PlaytestScenario {
                     new Step(20, "day: at the town hall", List.of("playtest home", "time set 6000", "weather clear")),
                     new Step(25, "the player stands for mayor with the campaign book", List.of("playtest stand")),
                     new Step(60, "the campaign is rushed: a citizen stands", List.of("townhall rush")),
-                    new Step(200, "scenario done", List.of())),
+                    new Step(330, "scenario done", List.of())),
             // Each addon window opens, and its close button closes it (a real mouse click).
             "windows", List.of(
                     new Step(20, "out in the open", List.of("playtest home", "tp @s ~24 ~ ~24", "execute align xyz run tp @s ~0.5 ~ ~0.5 0 0",

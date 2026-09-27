@@ -80,8 +80,11 @@ public final class Elections {
     private static final int SPEECH_RETRY_TICKS = 60;
     /** How long a busy candidate may take to get free and walk over; then they speak where they stand. */
     private static final int SPEECH_WALK_TICKS = 20 * 90;
-    /** How long a campaign speech is waited for, and voting held back for it. */
-    private static final int SPEECH_WAIT_TICKS = 20 * 180;
+    /**
+     * How long a campaign speech is waited for, and voting held back for it. A citizen who just chatted
+     * stays on the core's automatic cooldown for 2 minutes, and may be in another chat before that.
+     */
+    private static final int SPEECH_WAIT_TICKS = 20 * 300;
     private static final Gson GSON = new Gson();
 
     /** Someone standing for mayor. Citizens are keyed by their entity UUID, as in relationship memory. */
