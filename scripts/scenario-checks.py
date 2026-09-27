@@ -69,8 +69,16 @@ class Run:
         return [line for line in self.lines if begin <= line["at"] < stop and re.search(pattern, line["text"])]
 
 
+# How a citizen came to say a line, in words: "(PLAYER)" read as if the player had said it.
+SETTINGS = {"PLAYER": "citizen, talking with the player", "CONTROLLED": "citizen, in a group",
+            "CITIZEN_PAIR": "citizen, chatting with another citizen", "ADDON_AMBIENT": "citizen, speaking up on their own"}
+
+
 def transcript(entries):
-    return "\n".join(f'{e["speaker"]} ({e.get("kind", "?")}): {e.get("text", "")}' for e in entries)
+    """Every line here is a citizen's; the kind says in what setting it was said."""
+    return "Every line below was spoken by a citizen, never by the player.\n" + "\n".join(
+        f'{e["speaker"]} ({SETTINGS.get(e.get("kind"), "citizen, " + str(e.get("kind", "?")).lower())}): {e.get("text", "")}'
+        for e in entries)
 
 
 class Judge:
@@ -282,7 +290,8 @@ SCENARIOS = {
         judged("the answer fits the question",
                "At the campfire the player asked: 'Can one of you tell me what lies beyond the hills to the east?'. "
                "PASS if a citizen responds to that question in character within these lines; saying they have "
-               "never been there or do not know counts, as long as they respond to it. FAIL if nobody responds to it.",
+               "never been there, do not know or have wondered about it too counts, as long as a line takes up the "
+               "question. FAIL only if no line refers to it at all.",
                start="player speaks up", end="campfire stopped"),
     ],
     "night": [
