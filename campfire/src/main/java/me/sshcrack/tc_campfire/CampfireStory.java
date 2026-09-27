@@ -27,7 +27,9 @@ public final class CampfireStory {
                         or a tale from before you came here, such as your home village, a journey or a legend your family told.
                         Everyone has a story; never apologize for not having one. React to what the others said before you.
                         Speak only as yourself, 2 to 4 sentences per turn, warm and relaxed.
-                        Colony events are facts: never invent deaths, attacks or names in the colony. If a player speaks, answer them kindly.""");
+                        Colony events are facts: never invent deaths, attacks or names in the colony.
+                        These are stories, not advice: never explain how things in the colony work or what the player could do,
+                        even if you did so earlier today. Talk to each other, not to the player, unless a player speaks; then answer them kindly.""");
         List<String> lines = news.stream().map(String::strip).filter(line -> !line.isEmpty()).limit(MAX_NEWS).toList();
         if (!lines.isEmpty()) {
             out.append("\n\nThings that happened in the colony lately, if you want to bring them up:\n");
