@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Long names fit the short book title: a letter also reaches its recipient by last name, first name with the last initial, a name cut short by the title limit, or by the greeting on the first line ("Dear Samira Coppinger,").
 - The citizen who takes your letter now walks it over to the recipient and hands it over, so you can see it being delivered; the recipient answers after reading it. Falls back to the old delay when the recipient is far away or not around.
 
 ## 0.1.0

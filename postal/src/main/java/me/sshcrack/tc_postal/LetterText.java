@@ -18,6 +18,8 @@ public final class LetterText {
     static final int MAX_REPLY_CHARS = 1_500;
     static final int MAX_MEMORY_CHARS = 200;
     private static final int MAX_BOOK_TITLE = 32;
+    /** A title cut short still names someone when this much of the name is there. */
+    private static final int MIN_PREFIX = 5;
 
     private LetterText() {
     }
@@ -28,17 +30,38 @@ public final class LetterText {
 
     /**
      * Finds the recipient named by a letter's title in {@code names}: "Anna Smith", "To Anna",
-     * "Dear Anna," all work. Full names win over first names; first and last name also match a name
-     * with a middle initial. Returns the index, {@link #NOT_FOUND} or {@link #AMBIGUOUS}.
+     * "Dear Anna," all work. Full names win over first and last name (which also match a name with a
+     * middle initial), then first name, last name, first name with the last initial ("Anna S."), and
+     * a title cut short by the book's length limit ("Samira R. Coppi"). Returns the index,
+     * {@link #NOT_FOUND} or {@link #AMBIGUOUS}.
      */
     public static int matchRecipient(String title, List<String> names) {
         String wanted = normalize(title);
         if (wanted.isEmpty()) return NOT_FOUND;
-        int found = unique(names, name -> normalize(name).equals(wanted));
-        if (found != NOT_FOUND) return found;
-        found = unique(names, name -> firstAndLast(name).equals(wanted));
-        if (found != NOT_FOUND) return found;
-        return unique(names, name -> firstName(name).equals(wanted));
+        List<Predicate<String>> tests = List.of(
+                name -> normalize(name).equals(wanted),
+                name -> firstAndLast(name).equals(wanted),
+                name -> firstName(name).equals(wanted),
+                name -> lastName(name).equals(wanted),
+                name -> wanted.matches(".+ [a-z]") && (firstName(name) + " " + lastName(name).charAt(0)).equals(wanted),
+                name -> wanted.length() >= MIN_PREFIX && (normalize(name).startsWith(wanted) || firstAndLast(name).startsWith(wanted)));
+        for (Predicate<String> test : tests) {
+            int found = unique(names, test);
+            if (found != NOT_FOUND) return found;
+        }
+        return NOT_FOUND;
+    }
+
+    /**
+     * Like {@link #matchRecipient(String, List)}, falling back to the letter's greeting when the title
+     * names nobody: "Dear Samira Coppinger," on the first line of the first page.
+     */
+    public static int matchRecipient(String title, @Nullable String firstPage, List<String> names) {
+        int found = matchRecipient(title, names);
+        if (found != NOT_FOUND || firstPage == null) return found;
+        String firstLine = firstPage.strip().split("\\R", 2)[0];
+        int comma = firstLine.indexOf(',');
+        return matchRecipient(comma >= 0 ? firstLine.substring(0, comma) : firstLine, names);
     }
 
     private static int unique(List<String> names, Predicate<String> test) {
@@ -66,6 +89,12 @@ public final class LetterText {
         String normalized = normalize(name);
         int space = normalized.indexOf(' ');
         return space < 0 ? normalized : normalized.substring(0, space);
+    }
+
+    private static String lastName(String name) {
+        String normalized = normalize(name);
+        int space = normalized.lastIndexOf(' ');
+        return space < 0 ? normalized : normalized.substring(space + 1);
     }
 
     private static String firstAndLast(String name) {
