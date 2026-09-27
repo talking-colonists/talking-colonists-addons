@@ -41,8 +41,8 @@ Playtests have caught every such mismatch so far; the doc exists so the design c
   `playtest/.../PlaytestScenario.java` as a real player in the playtest colony (finished buildings,
   pasted like the build tool's creative placement), then prints the speech report and the scenario's
   checks (`scripts/scenario-checks.py`: PASS/FAIL rules on the log, and an LLM judge for what a rule
-  cannot decide). Steps are commands, `chat:<text>`, `await <seconds> <regex>` or `await?` (may not happen) (holds the scenario
-  until a log line matches, e.g. a citizen's line) or `client:…`: `camera`, `hud`, `use`, `useitem`,
+  cannot decide). Steps are commands, `chat:<text>`, `await <seconds> <regex>` (holds the scenario
+  until a log line matches, e.g. a citizen's line; `await?` for one that may not happen) or `client:…`: `camera`, `hud`, `use`, `useitem`,
   `useblock`, `close`, `click <pane>`, `type <pane> <text>`, `dump <pane>`, `screen` and
   `screenshot <name>` (kept next to the log in `build/scenario/`). `/playtest talk`, `probe`,
   `build` and `goto builder|citizen` help scenarios along. Screenshots are 1280x720 (GUI scale 3).
