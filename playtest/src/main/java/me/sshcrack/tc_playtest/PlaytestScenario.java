@@ -1,6 +1,8 @@
 package me.sshcrack.tc_playtest;
 
 import com.google.gson.JsonObject;
+import com.ldtteam.blockui.BOScreen;
+import com.ldtteam.blockui.Pane;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
@@ -15,6 +17,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 /*?}*/
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +28,8 @@ import java.util.Map;
  * prints between the voices. Enabled with {@code -Dtc_playtest.scenario=<name>}. Commands starting with
  * {@code client:} run on the client: {@code client:camera first|back|front}, {@code client:hud on|off},
  * {@code client:use} (right-click the block looked at), {@code client:close} (the open screen) and
- * {@code client:screenshot <name>} (saved to the run's {@code screenshots/} folder).
+ * {@code client:screenshot <name>} (saved to the run's {@code screenshots/} folder), {@code client:click <pane id>}
+ * (a real mouse click on a pane of the open BlockUI window) and {@code client:screen} (logs the open screen).
  */
 final class PlaytestScenario {
     /** One step: after {@code atSeconds} in the world, log {@code mark} and run the commands. */
@@ -46,6 +50,23 @@ final class PlaytestScenario {
                     new Step(25, "the player stands for mayor with the campaign book", List.of("playtest stand")),
                     new Step(60, "the campaign is rushed: a citizen stands", List.of("townhall rush")),
                     new Step(200, "scenario done", List.of())),
+            // Each addon window opens, and its close button closes it (a real mouse click).
+            "windows", List.of(
+                    new Step(20, "out in the open", List.of("playtest home", "tp @s ~24 ~ ~24", "execute align xyz run tp @s ~0.5 ~ ~0.5 0 0",
+                            "item replace entity @s weapon.mainhand with air")),
+                    new Step(23, "notice board: placed", List.of("setblock ~ ~ ~2 tc_noticeboard:notice_board[facing=north]", "tp @s ~ ~ ~ facing ~ ~0.5 ~2")),
+                    new Step(25, "notice board: opened", List.of("client:use")),
+                    new Step(27, "notice board: close clicked", List.of("client:screen", "client:click close")),
+                    new Step(28, "notice board: after close", List.of("client:screen", "client:close", "setblock ~ ~ ~2 air")),
+                    new Step(31, "ballot box: placed", List.of("setblock ~ ~ ~2 tc_townhall:ballot_box[facing=north]", "tp @s ~ ~ ~ facing ~ ~0.5 ~2")),
+                    new Step(33, "ballot box: opened", List.of("client:use")),
+                    new Step(35, "ballot box: close clicked", List.of("client:screen", "client:click close")),
+                    new Step(36, "ballot box: after close", List.of("client:screen", "client:close", "setblock ~ ~ ~2 air")),
+                    new Step(39, "suggestion box: placed", List.of("setblock ~ ~ ~2 tc_townhall:suggestion_box[facing=north]", "tp @s ~ ~ ~ facing ~ ~0.5 ~2")),
+                    new Step(41, "suggestion box: opened", List.of("client:use")),
+                    new Step(43, "suggestion box: close clicked", List.of("client:screen", "client:click close")),
+                    new Step(44, "suggestion box: after close", List.of("client:screen", "client:close", "setblock ~ ~ ~2 air")),
+                    new Step(47, "scenario done", List.of())),
             // The mayor's hat on a citizen mayor and on the player, then the mayor's report.
             "mayor", List.of(
                     new Step(20, "day: standing in the colony", List.of("playtest home", "time set 6000", "weather clear")),
@@ -125,11 +146,51 @@ final class PlaytestScenario {
                 }
             }
             case "close" -> mc.setScreen(null);
+            case "click" -> click(mc, parts.length > 1 ? parts[1] : "");
+            case "screen" -> PlaytestMod.LOGGER.info("TC_SCENARIO_SCREEN {}", mc.screen == null ? "none" : mc.screen.getClass().getSimpleName());
             case "hud" -> mc.options.hideGui = parts.length > 1 && parts[1].equals("off");
             case "screenshot" -> Screenshot.grab(mc.gameDirectory, (parts.length > 1 ? parts[1] : "scenario") + ".png",
                     mc.getMainRenderTarget(), message -> PlaytestMod.LOGGER.info("Scenario screenshot: {}", message.getString()));
             default -> PlaytestMod.LOGGER.warn("Unknown scenario client command {}", command);
         }
+    }
+
+    /**
+     * Clicks a pane of the open BlockUI window by id, with a real mouse press and release at its center,
+     * so hit-testing is part of the test (a pane covering the button would take the click).
+     */
+    private static void click(Minecraft mc, String id) {
+        if (!(mc.screen instanceof BOScreen screen)) {
+            PlaytestMod.LOGGER.warn("TC_SCENARIO_CLICK {}: no BlockUI window is open", id);
+            return;
+        }
+        Pane pane = screen.getWindow().findPaneByID(id);
+        if (pane == null) {
+            PlaytestMod.LOGGER.warn("TC_SCENARIO_CLICK {}: no such pane", id);
+            return;
+        }
+        double x = pane.getWidth() / 2.0;
+        double y = pane.getHeight() / 2.0;
+        for (Pane current = pane; current != null && current != screen.getWindow(); current = current.getParent()) {
+            x += current.getX();
+            y += current.getY();
+        }
+        try {
+            double scale = screenField(screen, "renderScale");
+            double mouseX = screenField(screen, "x") + x * scale;
+            double mouseY = screenField(screen, "y") + y * scale;
+            boolean handled = screen.mouseClicked(mouseX, mouseY, 0);
+            screen.mouseReleased(mouseX, mouseY, 0);
+            PlaytestMod.LOGGER.info("TC_SCENARIO_CLICK {} at {},{}: handled={}", id, (int) mouseX, (int) mouseY, handled);
+        } catch (ReflectiveOperationException e) {
+            PlaytestMod.LOGGER.warn("TC_SCENARIO_CLICK {}: {}", id, e.toString());
+        }
+    }
+
+    private static double screenField(BOScreen screen, String name) throws ReflectiveOperationException {
+        Field field = BOScreen.class.getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getDouble(screen);
     }
 
     /** Same line format as Talking Colonists' SpeechTimeline, so the report shows it on the timeline. */
