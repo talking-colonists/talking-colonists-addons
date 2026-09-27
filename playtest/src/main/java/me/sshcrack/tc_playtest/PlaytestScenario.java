@@ -55,8 +55,11 @@ final class PlaytestScenario {
                     new Step(20, "day: standing in the colony", List.of("playtest home", "time set 6000")),
                     new Step(110, "dusk: campfire night starts", List.of("time set 12500", "campfire start")),
                     // #259: the guests sit in a ring around the fire.
-                    new Step(170, "screenshot: the ring at the fire", List.of("tp @s ~ ~ ~ facing entity @e[type=minecolonies:citizen,sort=nearest,limit=1]", "client:camera back", "client:screenshot campfire_ring",
-                            "client:camera first")),
+                    // The fire is 3.5 blocks north of home: step back and up to see the whole ring.
+                    new Step(169, "steps back from the fire", List.of("playtest home", "tp @s ~ ~2 ~6 facing ~ ~ ~-3.5",
+                            "client:hud off")),
+                    new Step(171, "screenshot: the ring at the fire", List.of("client:screenshot campfire_ring",
+                            "client:hud on", "playtest home")),
                     new Step(200, "player speaks up at the fire",
                             List.of("chat:Excuse me, can one of you tell me what lies beyond the hills to the east?")),
                     new Step(320, "campfire stopped", List.of("campfire stop")),
@@ -98,7 +101,10 @@ final class PlaytestScenario {
                     new Step(3, "day: the player arrives", List.of("time set 1000", "weather clear",
                             "awaitever 240 walks up to \\w+ about mc_talking:welcome")),
                     new Step(4, "the welcome is said", List.of("awaitever 90 \"type\":\"said\".*\"kind\":\"ADDON_AMBIENT\"")),
-                    new Step(6, "talk to the citizen next to you", List.of("citizen_chat on", "playtest talk", "await 60 -> ACTIVE")),
+                    new Step(6, "talk to the citizen next to you", List.of("citizen_chat on", "playtest talk",
+                            // Ready for the player: after the citizen's opening line, if any. A session already open
+                            // (e.g. for an ambient line) logs no new ACTIVE.
+                            "await 60 has dirty AI status LISTENING")),
                     new Step(8, "asks about the day", List.of("chat:Hey! How's your day going?",
                             "await 60 \"type\":\"said\".*\"kind\":\"PLAYER\"")),
                     new Step(14, "asks how to tell everyone", List.of(
@@ -115,12 +121,12 @@ final class PlaytestScenario {
                     new Step(20, "day: at home", List.of("playtest home", "time set 1000", "weather clear")),
                     new Step(22, "a new residence is ordered", List.of("playtest build", "await 300 TC_BUILD claimed by")),
                     new Step(90, "goes to the builder", List.of("playtest goto builder")),
-                    new Step(92, "talks to the builder", List.of("citizen_chat on", "playtest talk", "await 60 -> ACTIVE")),
+                    new Step(92, "talks to the builder", List.of("citizen_chat on", "playtest talk", "await 60 has dirty AI status LISTENING")),
                     new Step(94, "asks the builder about the house", List.of(
                             "chat:Hey! How is the new house coming along? Do you need anything for it?",
                             "await 60 \"type\":\"said\".*\"kind\":\"PLAYER\"")),
                     new Step(110, "walks over to another citizen", List.of("playtest goto citizen")),
-                    new Step(125, "talks to another citizen", List.of("playtest talk", "await 60 -> ACTIVE")),
+                    new Step(125, "talks to another citizen", List.of("playtest talk", "await 60 has dirty AI status LISTENING")),
                     new Step(127, "asks another citizen about the house", List.of(
                             "chat:Do you know how the new house is coming along?",
                             "await 60 \"type\":\"said\".*\"kind\":\"PLAYER\"")),
@@ -154,7 +160,8 @@ final class PlaytestScenario {
                     new Step(20, "day: standing among citizens", List.of("playtest home", "time set 6000", "weather clear",
                             "playtest goto citizen",
                             "tp @e[type=minecolonies:citizen,sort=nearest,limit=1,distance=3..] ~2 ~ ~2",
-                            "await 300 \\[RandomConv\\] Starting conversation")),
+                            // Pair chats depend on chance, budget and cooldowns: the scenario goes on without one.
+                            "await? 300 \\[RandomConv\\] Starting conversation")),
                     new Step(25, "night falls", List.of("time set 18000")),
                     new Step(90, "citizens are asleep", List.of("playtest probe")),
                     new Step(180, "still night", List.of("playtest probe")),
@@ -187,6 +194,7 @@ final class PlaytestScenario {
     private static int next;
     private static @Nullable Pattern awaiting;
     private static String awaitText = "";
+    private static boolean awaitOptional;
     private static int awaitFrom;
     private static int awaitTicksLeft;
 
@@ -230,7 +238,9 @@ final class PlaytestScenario {
         for (String command : step.commands()) {
             if (command.startsWith("chat:")) mc.player.connection.sendChat(command.substring("chat:".length()));
             else if (command.startsWith("client:")) client(mc, command.substring("client:".length()));
-            else if (command.startsWith("await ") || command.startsWith("awaitever ")) await(command, stepStart);
+            else if (command.startsWith("await ") || command.startsWith("await? ") || command.startsWith("awaitever ")) {
+                await(command, stepStart);
+            }
             else mc.player.connection.sendCommand(command);
         }
         if (next == steps.size() && awaiting == null) finish(mc);
@@ -245,12 +255,14 @@ final class PlaytestScenario {
     /**
      * {@code await <seconds> <regex>}: waits until a log line logged since this step started matches
      * ({@code awaitever}: since the game started), at most that long. Logged as TC_AWAIT matched/timeout,
+     * or TC_AWAIT gave up for {@code await?}, which may not happen (the checks then skip what depends on it),
      * which the scenario checks read.
      */
     private static void await(String command, int stepStart) {
         String[] parts = command.split(" ", 3);
         awaiting = Pattern.compile(parts[2]);
         awaitText = parts[2];
+        awaitOptional = parts[0].equals("await?");
         awaitFrom = parts[0].equals("awaitever") ? 0 : stepStart;
         awaitTicksLeft = Integer.parseInt(parts[1]) * 20;
     }
@@ -260,7 +272,8 @@ final class PlaytestScenario {
         if (line != null) {
             PlaytestMod.LOGGER.info("TC_AWAIT matched {} :: {}", awaitText, line.length() > 300 ? line.substring(0, 300) : line);
         } else if (--awaitTicksLeft <= 0) {
-            PlaytestMod.LOGGER.warn("TC_AWAIT timeout {}", awaitText);
+            if (awaitOptional) PlaytestMod.LOGGER.info("TC_AWAIT gave up {}", awaitText);
+            else PlaytestMod.LOGGER.warn("TC_AWAIT timeout {}", awaitText);
         } else {
             return false;
         }

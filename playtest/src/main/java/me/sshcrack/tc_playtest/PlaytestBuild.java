@@ -6,6 +6,7 @@ import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.buildings.IBuilding;
 import com.minecolonies.api.colony.workorders.IBuilderWorkOrder;
 import com.minecolonies.api.colony.workorders.IServerWorkOrder;
+import com.minecolonies.api.colony.requestsystem.request.IRequest;
 import com.minecolonies.api.crafting.ItemStorage;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import com.minecolonies.core.colony.buildings.AbstractBuildingStructureBuilder;
@@ -14,7 +15,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -118,7 +121,17 @@ final class PlaytestBuild {
         long needed = 0;
         for (ItemStorage resource : hut.getNeededResources().values()) needed += resource.getAmount();
         return "claimed by " + name + ", stage " + Objects.toString(current.getStage(), "none") + ", materials still needed "
-                + needed + " of " + current.getAmountOfResources();
+                + needed + " of " + current.getAmountOfResources() + ", open requests: " + requests(hut, builder);
+    }
+
+    /** What the builder asked for, e.g. a tool before clearing the site; "none" if nothing. */
+    private static String requests(IBuilding hut, @Nullable ICitizenData builder) {
+        if (builder == null) return "none";
+        List<String> asked = new ArrayList<>();
+        for (IRequest<?> request : hut.getOpenRequests(builder.getId())) {
+            asked.add(request.getShortDisplayString().getString());
+        }
+        return asked.isEmpty() ? "none" : String.join("; ", asked);
     }
 
     private static @Nullable AbstractBuildingStructureBuilder builderHut(IColony colony) {

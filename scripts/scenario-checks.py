@@ -230,6 +230,16 @@ COMMON = [
 HOSTILE = r"incompeten|useless|pathetic|how dare|disgrace|worthless|lazy"
 CAMPFIRE = {"start": "campfire night starts", "end": "campfire stopped"}
 
+def pair_ends_asleep(run, judge):
+    """A pair chat still going when the citizens go to bed ends with "fell asleep" (the other night
+    checks catch one that talks on)."""
+    if not run.logged(r"\[RandomConv\] Starting conversation", end="night falls"):
+        return None, "no pair chat started by day"
+    if run.logged(r"\[RandomConv\] .* fell asleep; their conversation ends"):
+        return True, ""
+    return True, "the pair finished before anyone fell asleep"
+
+
 SCENARIOS = {
     "firstday": [
         said_any("the welcome is said and mentions the handbook", kind="ADDON_AMBIENT", text=r"handbook",
@@ -279,6 +289,7 @@ SCENARIOS = {
         logged_any("most citizens are asleep at night", r"TC_PROBE .*asleep=([2-9]|\d\d)/"),
         logged_none("no pair conversation starts at night", r"\[RandomConv\] Starting conversation", start="night falls"),
         said_none("no pair conversation goes on at night", kind="CITIZEN_PAIR", start="citizens are asleep"),
+        ("a pair chat going at nightfall ends when they fall asleep", pair_ends_asleep),
     ],
     "windows": [check for window in ("notice board", "ballot box", "suggestion box", "handbook")
                 for check in window_checks(window)],

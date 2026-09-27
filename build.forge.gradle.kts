@@ -64,6 +64,8 @@ legacyForge {
 			client()
 			gameDirectory = file("run/scenario/")
 			programArgument("--username=Dev")
+			// The size of the headless screen: sharper screenshots, GUI text readable at scale 3.
+			programArguments.addAll("--width", "1280", "--height", "720")
 			if (file("run/scenario/saves/TC_Playtest").isDirectory) {
 				programArguments.addAll("--quickPlaySingleplayer", "TC_Playtest")
 			}
