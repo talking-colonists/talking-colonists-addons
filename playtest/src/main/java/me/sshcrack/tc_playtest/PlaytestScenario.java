@@ -6,8 +6,11 @@ import com.ldtteam.blockui.Pane;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 /*? if forge {*/
 /*import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
@@ -28,7 +31,8 @@ import java.util.Map;
  * Each step is logged as a speech-timeline mark, which the report
  * prints between the voices. Enabled with {@code -Dtc_playtest.scenario=<name>}. Commands starting with
  * {@code client:} run on the client: {@code client:camera first|back|front}, {@code client:hud on|off},
- * {@code client:use} (right-click the block looked at), {@code client:close} (the open screen) and
+ * {@code client:use} (right-click the block looked at), {@code client:useblock <dx> <dy> <dz>} (right-click the
+ * block at that offset from the player), {@code client:close} (the open screen) and
  * {@code client:screenshot <name>} (saved to the run's {@code screenshots/} folder), {@code client:click <pane id>}
  * (a real mouse click on a pane of the open BlockUI window) and {@code client:screen} (logs the open screen).
  */
@@ -58,15 +62,15 @@ final class PlaytestScenario {
                     new Step(20, "out in the open", List.of("playtest home", "tp @s ~24 ~ ~24", "execute align xyz run tp @s ~0.5 ~ ~0.5 0 0",
                             "item replace entity @s weapon.mainhand with air")),
                     new Step(23, "notice board: placed", List.of("setblock ~ ~ ~2 tc_noticeboard:notice_board[facing=north]", "tp @s ~ ~ ~ facing ~ ~0.5 ~2")),
-                    new Step(25, "notice board: opened", List.of("client:use")),
+                    new Step(25, "notice board: opened", List.of("client:useblock 0 0 2")),
                     new Step(27, "notice board: close clicked", List.of("client:screen", "client:click close")),
                     new Step(28, "notice board: after close", List.of("client:screen", "client:close", "setblock ~ ~ ~2 air")),
                     new Step(31, "ballot box: placed", List.of("setblock ~ ~ ~2 tc_townhall:ballot_box[facing=north]", "tp @s ~ ~ ~ facing ~ ~0.5 ~2")),
-                    new Step(33, "ballot box: opened", List.of("client:use")),
+                    new Step(33, "ballot box: opened", List.of("client:useblock 0 0 2")),
                     new Step(35, "ballot box: close clicked", List.of("client:screen", "client:click close")),
                     new Step(36, "ballot box: after close", List.of("client:screen", "client:close", "setblock ~ ~ ~2 air")),
                     new Step(39, "suggestion box: placed", List.of("setblock ~ ~ ~2 tc_townhall:suggestion_box[facing=north]", "tp @s ~ ~ ~ facing ~ ~0.5 ~2")),
-                    new Step(41, "suggestion box: opened", List.of("client:use")),
+                    new Step(41, "suggestion box: opened", List.of("client:useblock 0 0 2")),
                     new Step(43, "suggestion box: close clicked", List.of("client:screen", "client:click close")),
                     new Step(44, "suggestion box: after close", List.of("client:screen", "client:close", "setblock ~ ~ ~2 air")),
                     new Step(47, "scenario done", List.of())),
@@ -149,6 +153,7 @@ final class PlaytestScenario {
                     mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, hit);
                 }
             }
+            case "useblock" -> useBlock(mc, parts.length > 1 ? parts[1] : "0 0 0");
             case "close" -> mc.setScreen(null);
             case "click" -> click(mc, parts.length > 1 ? parts[1] : "");
             case "screen" -> PlaytestMod.LOGGER.info("TC_SCENARIO_SCREEN {}", mc.screen == null ? "none" : mc.screen.getClass().getSimpleName());
@@ -157,6 +162,14 @@ final class PlaytestScenario {
                     mc.getMainRenderTarget(), message -> PlaytestMod.LOGGER.info("Scenario screenshot: {}", message.getString()));
             default -> PlaytestMod.LOGGER.warn("Unknown scenario client command {}", command);
         }
+    }
+
+    /** Right-clicks the block at "dx dy dz" from the player's block, whatever the crosshair is on. */
+    private static void useBlock(Minecraft mc, String offset) {
+        String[] parts = offset.trim().split("\\s+");
+        BlockPos pos = mc.player.blockPosition().offset(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
+        if (mc.gameMode == null) return;
+        mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(pos), Direction.NORTH, pos, false));
     }
 
     /**
