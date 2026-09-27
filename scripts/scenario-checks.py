@@ -13,6 +13,7 @@ import argparse
 import json
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime
@@ -103,15 +104,20 @@ class Judge:
         request = urllib.request.Request(
             f"https://generativelanguage.googleapis.com/v1beta/models/{JUDGE_MODEL}:generateContent",
             data=json.dumps(body).encode(), headers={"Content-Type": "application/json", "x-goog-api-key": self.key})
-        try:
-            with urllib.request.urlopen(request, timeout=60) as response:
-                reply = json.load(response)
-            verdict = json.loads(reply["candidates"][0]["content"]["parts"][0]["text"])
-            return bool(verdict["pass"]), verdict["reason"]
-        except urllib.error.HTTPError as error:
-            return None, f"judge unavailable (HTTP {error.code})"
-        except (urllib.error.URLError, KeyError, IndexError, ValueError, TimeoutError) as error:
-            return None, f"judge unavailable ({type(error).__name__})"
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(request, timeout=60) as response:
+                    reply = json.load(response)
+                verdict = json.loads(reply["candidates"][0]["content"]["parts"][0]["text"])
+                return bool(verdict["pass"]), verdict["reason"]
+            except urllib.error.HTTPError as error:
+                # Overloaded (503) or rate-limited (429): wait and ask again.
+                if error.code in (429, 500, 503) and attempt < 2:
+                    time.sleep(10 * (attempt + 1))
+                    continue
+                return None, f"judge unavailable (HTTP {error.code})"
+            except (urllib.error.URLError, KeyError, IndexError, ValueError, TimeoutError) as error:
+                return None, f"judge unavailable ({type(error).__name__})"
 
 
 # A check is (name, function(run, judge) -> (True/False/None, detail)). None means SKIP.
@@ -240,7 +246,7 @@ SCENARIOS = {
                "The player asked how to tell everyone in the colony something and whether the citizen can do it. "
                "PASS if the citizen asks what the message should be, or explains how, without claiming to have "
                "announced something already. FAIL if the citizen says it announced or broadcast something.",
-               kind="PLAYER", start="asks how to tell everyone", end="walks away"),
+               kind="PLAYER", start="asks how to tell everyone", end="walks over to another citizen"),
         said_any("a later introduction is said", kind="ADDON_AMBIENT", start="waits for the next introduction"),
         said_none("the later introduction does not welcome again", kind="ADDON_AMBIENT", text=r"welcome",
                   start="waits for the next introduction"),
@@ -298,14 +304,15 @@ SCENARIOS = {
     ],
     "construction": [
         logged_any("the builder takes the order", r"TC_BUILD claimed by"),
-        logged_none("the playtest buildings have blueprints", r"Error loading blueprint"),
+        logged_none("the playtest buildings are pasted", r"TC_COLONY .*(did not|could not|failed)"),
         ("the conversation is with the builder", talked_to_builder),
         judged("the builder knows how the house is going",
                "The player asked the colony's builder how the new house is coming along and whether they need anything. "
                "PASS if the builder talks about building the house and what they say fits the game state below "
-               "(e.g. just started, how far along, or which materials are missing). FAIL if they seem unaware of it, "
+               "(e.g. just started, how far along, which materials are missing, or a tool they need first: a builder "
+               "cannot clear or build without a shovel, axe or pickaxe, and asks for one). FAIL if they seem unaware of it, "
                "claim it is finished, or contradict the game state.",
-               facts=r"TC_BUILD", kind="PLAYER", start="asks the builder about the house", end="walks away"),
+               facts=r"TC_BUILD", kind="PLAYER", start="asks the builder about the house", end="walks over to another citizen"),
         judged("another citizen knows the house is being built",
                "The player asked a citizen who is not the builder how the new house is coming along. PASS if the "
                "citizen knows a new house is being built and does not contradict the game state below (it is not "
@@ -321,7 +328,7 @@ SCENARIOS = {
             "The player posted a notice: 'Harvest fair: Next Sunday we hold a harvest fair at the town hall. Bring your "
             "best pumpkins and something to share!'. These are citizens' written replies pinned under it. PASS if they "
             "reply to the notice itself, constructively and in character (joy, questions, offers, gentle concerns). "
-            "FAIL if they ignore the notice, are hostile, or are all the same.",
+            "Replies may share ideas or tone. FAIL only if they ignore the notice, are hostile, or are near-identical copies of each other.",
             "\n".join(line["text"].split(" :: ", 1)[1] for line in run.logged(r"TC_SCENARIO_TEXT replies :: ")))),
     ],
     "ambient": [

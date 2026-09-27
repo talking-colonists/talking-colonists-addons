@@ -7,12 +7,14 @@ import com.minecolonies.api.colony.buildings.IBuilding;
 import com.minecolonies.api.colony.workorders.IBuilderWorkOrder;
 import com.minecolonies.api.colony.workorders.IServerWorkOrder;
 import com.minecolonies.api.crafting.ItemStorage;
+import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import com.minecolonies.core.colony.buildings.AbstractBuildingStructureBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Comparator;
 import java.util.Objects;
 
 /**
@@ -66,6 +68,27 @@ final class PlaytestBuild {
         }
         player.teleportTo(entity.getX() + 1.5, entity.getY(), entity.getZ() + 1.5);
         PlaytestMod.LOGGER.info("TC_GOTO next to the builder {}", builder.getName());
+        return true;
+    }
+
+    /** Teleports the player next to an awake citizen who is not the builder, nearest to the colony center. */
+    static boolean gotoCitizen(ServerPlayer player) {
+        IColony owned = PlaytestColony.find(player);
+        if (owned == null) return false;
+        AbstractBuildingStructureBuilder builderHut = builderHut(owned);
+        BlockPos center = owned.getCenter();
+        AbstractEntityCitizen citizen = owned.getCitizenManager().getCitizens().stream()
+                .filter(data -> builderHut == null || !builderHut.getAllAssignedCitizen().contains(data))
+                .map(data -> data.getEntity().orElse(null))
+                .filter(entity -> entity != null && entity.isAlive() && !entity.isSleeping())
+                .min(Comparator.comparingDouble(entity -> entity.blockPosition().distSqr(center)))
+                .orElse(null);
+        if (citizen == null) {
+            PlaytestMod.LOGGER.warn("TC_GOTO no citizen to go to");
+            return false;
+        }
+        player.teleportTo(citizen.getX() + 1.5, citizen.getY(), citizen.getZ() + 1.5);
+        PlaytestMod.LOGGER.info("TC_GOTO next to {}", citizen.getCitizenData().getName());
         return true;
     }
 

@@ -53,8 +53,11 @@ final class PlaytestCommand {
                 .then(Commands.literal("talk").executes(PlaytestCommand::talk))
                 .then(Commands.literal("probe").executes(PlaytestCommand::probe))
                 .then(Commands.literal("build").executes(context -> PlaytestBuild.order(context.getSource().getPlayerOrException()) ? 1 : 0))
-                .then(Commands.literal("goto").then(Commands.literal("builder")
-                        .executes(context -> PlaytestBuild.gotoBuilder(context.getSource().getPlayerOrException()) ? 1 : 0))));
+                .then(Commands.literal("goto")
+                        .then(Commands.literal("builder")
+                                .executes(context -> PlaytestBuild.gotoBuilder(context.getSource().getPlayerOrException()) ? 1 : 0))
+                        .then(Commands.literal("citizen")
+                                .executes(context -> PlaytestBuild.gotoCitizen(context.getSource().getPlayerOrException()) ? 1 : 0))));
     }
 
     private static int home(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {

@@ -119,7 +119,7 @@ final class PlaytestScenario {
                     new Step(94, "asks the builder about the house", List.of(
                             "chat:Hey! How is the new house coming along? Do you need anything for it?",
                             "await 60 \"type\":\"said\".*\"kind\":\"PLAYER\"")),
-                    new Step(110, "walks away", List.of("playtest home", "tp @s ~ ~ ~6")),
+                    new Step(110, "walks over to another citizen", List.of("playtest goto citizen")),
                     new Step(125, "talks to another citizen", List.of("playtest talk", "await 60 -> ACTIVE")),
                     new Step(127, "asks another citizen about the house", List.of(
                             "chat:Do you know how the new house is coming along?",
@@ -151,7 +151,9 @@ final class PlaytestScenario {
                     new Step(91, "scenario done", List.of())),
             // A pair of citizens chatting by day, then night: chats end when they fall asleep, none start.
             "night", List.of(
-                    new Step(20, "day: standing in the colony", List.of("playtest home", "time set 6000", "weather clear",
+                    new Step(20, "day: standing among citizens", List.of("playtest home", "time set 6000", "weather clear",
+                            "playtest goto citizen",
+                            "tp @e[type=minecolonies:citizen,sort=nearest,limit=1,distance=3..] ~2 ~ ~2",
                             "await 300 \\[RandomConv\\] Starting conversation")),
                     new Step(25, "night falls", List.of("time set 18000")),
                     new Step(90, "citizens are asleep", List.of("playtest probe")),
