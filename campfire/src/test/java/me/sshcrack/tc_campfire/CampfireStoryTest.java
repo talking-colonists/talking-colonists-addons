@@ -24,6 +24,7 @@ class CampfireStoryTest {
         assertTrue(agenda.startsWith("Campfire night in Oakvale. It is dusk, and Anna, Ben and Carl sit together"));
         assertTrue(agenda.contains("never invent deaths"));
         assertTrue(agenda.contains("never apologize"));
+        assertTrue(agenda.contains("These are stories, not advice"), "no how-to talk at the fire");
         assertTrue(agenda.contains("- A raid hit the east wall\n- Anna was hired as a baker\n"));
         assertTrue(agenda.endsWith("- 6"), "blank lines do not count");
         assertFalse(agenda.contains("- 7"), "at most five news lines");
