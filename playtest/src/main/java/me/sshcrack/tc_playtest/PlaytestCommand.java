@@ -6,7 +6,10 @@ import com.minecolonies.api.colony.buildings.IBuilding;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import me.sshcrack.mc_talking.api.colony.AddonColonyEvent;
+import me.sshcrack.mc_talking.api.conversation.CitizenConversationService;
+import me.sshcrack.mc_talking.api.conversation.ConversationStartResult;
 import me.sshcrack.mc_talking.api.colony.ColonyEventService;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -22,12 +25,15 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import me.sshcrack.tc_playtest.shared.book.WrittenBooks;
 
+import java.util.Comparator;
 import java.util.List;
 import com.minecolonies.api.colony.IVisitorData;
 import net.minecraft.world.item.Items;
 
 /** {@code /playtest}: the checklist, plus small helpers its buttons use. */
 final class PlaytestCommand {
+    private static final double TALK_RANGE = 16;
+
     private PlaytestCommand() {
     }
 
@@ -43,7 +49,9 @@ final class PlaytestCommand {
                 .then(Commands.literal("visitor").executes(PlaytestCommand::visitor))
                 .then(Commands.literal("notice").executes(PlaytestCommand::notice))
                 .then(Commands.literal("townhall").executes(PlaytestCommand::townHall))
-                .then(Commands.literal("stand").executes(PlaytestCommand::stand)));
+                .then(Commands.literal("stand").executes(PlaytestCommand::stand))
+                .then(Commands.literal("talk").executes(PlaytestCommand::talk))
+                .then(Commands.literal("probe").executes(PlaytestCommand::probe)));
     }
 
     private static int home(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
@@ -154,6 +162,34 @@ final class PlaytestCommand {
         player.setItemInHand(InteractionHand.MAIN_HAND, campaignBook(player));
         player.gameMode.useItemOn(player, player.serverLevel(), player.getMainHandItem(), InteractionHand.MAIN_HAND,
                 new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
+        return 1;
+    }
+
+    /**
+     * For scripted scenarios: starts a conversation with the nearest citizen, as walking up and talking
+     * would; with {@code /citizen_chat on} chat lines are then said to them. Logged as TC_TALK.
+     */
+    private static int talk(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        AbstractEntityCitizen citizen = player.serverLevel().getEntitiesOfClass(AbstractEntityCitizen.class,
+                        player.getBoundingBox().inflate(TALK_RANGE), entity -> entity.isAlive() && entity.getCitizenData() != null)
+                .stream().min(Comparator.comparingDouble(entity -> entity.distanceToSqr(player))).orElse(null);
+        if (citizen == null) {
+            PlaytestMod.LOGGER.warn("TC_TALK no citizen within {} blocks", TALK_RANGE);
+            return 0;
+        }
+        ConversationStartResult result = CitizenConversationService.startPlayerConversation(player, citizen);
+        PlaytestMod.LOGGER.info("TC_TALK {} with {}", result.status(), citizen.getCitizenData().getName());
+        return 1;
+    }
+
+    /** For scenario checks: logs the colony's state as a TC_PROBE line. */
+    private static int probe(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        IColony colony = colony(context.getSource().getPlayerOrException());
+        if (colony == null) return 0;
+        List<ICitizenData> citizens = colony.getCitizenManager().getCitizens();
+        long asleep = citizens.stream().filter(ICitizenData::isAsleep).count();
+        PlaytestMod.LOGGER.info("TC_PROBE day={} asleep={}/{}", colony.getWorld().isDay(), asleep, citizens.size());
         return 1;
     }
 

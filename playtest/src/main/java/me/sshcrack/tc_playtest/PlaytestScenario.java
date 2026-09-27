@@ -11,6 +11,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 /*? if forge {*/
 /*import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
@@ -23,6 +24,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * A scripted playtest for the headless scenario client ({@code scripts/scenario.sh}): once the
@@ -31,10 +33,12 @@ import java.util.Map;
  * Each step is logged as a speech-timeline mark, which the report
  * prints between the voices. Enabled with {@code -Dtc_playtest.scenario=<name>}. Commands starting with
  * {@code client:} run on the client: {@code client:camera first|back|front}, {@code client:hud on|off},
- * {@code client:use} (right-click the block looked at), {@code client:useblock <dx> <dy> <dz>} (right-click the
+ * {@code client:use} (right-click the block looked at), {@code client:useitem} (use the held item), {@code client:useblock <dx> <dy> <dz>} (right-click the
  * block at that offset from the player), {@code client:close} (the open screen) and
  * {@code client:screenshot <name>} (saved to the run's {@code screenshots/} folder), {@code client:click <pane id>}
  * (a real mouse click on a pane of the open BlockUI window) and {@code client:screen} (logs the open screen).
+ * {@code await <seconds> <regex>} holds the scenario clock until a log line matches (see {@link LogTap}).
+ * What a run must show is checked afterwards by {@code scripts/scenario-checks.py}.
  */
 final class PlaytestScenario {
     /** One step: after {@code atSeconds} in the world, log {@code mark} and run the commands. */
@@ -63,17 +67,47 @@ final class PlaytestScenario {
                             "item replace entity @s weapon.mainhand with air")),
                     new Step(23, "notice board: placed", List.of("setblock ~ ~ ~2 tc_noticeboard:notice_board[facing=north]", "tp @s ~ ~ ~ facing ~ ~0.5 ~2")),
                     new Step(25, "notice board: opened", List.of("client:useblock 0 0 2")),
-                    new Step(27, "notice board: close clicked", List.of("client:screen", "client:click close")),
+                    new Step(27, "notice board: close clicked", List.of("client:screen", "client:screenshot window_notice_board", "client:click close")),
                     new Step(28, "notice board: after close", List.of("client:screen", "client:close", "setblock ~ ~ ~2 air")),
                     new Step(31, "ballot box: placed", List.of("setblock ~ ~ ~2 tc_townhall:ballot_box[facing=north]", "tp @s ~ ~ ~ facing ~ ~0.5 ~2")),
                     new Step(33, "ballot box: opened", List.of("client:useblock 0 0 2")),
-                    new Step(35, "ballot box: close clicked", List.of("client:screen", "client:click close")),
+                    new Step(35, "ballot box: close clicked", List.of("client:screen", "client:screenshot window_ballot_box", "client:click close")),
                     new Step(36, "ballot box: after close", List.of("client:screen", "client:close", "setblock ~ ~ ~2 air")),
                     new Step(39, "suggestion box: placed", List.of("setblock ~ ~ ~2 tc_townhall:suggestion_box[facing=north]", "tp @s ~ ~ ~ facing ~ ~0.5 ~2")),
                     new Step(41, "suggestion box: opened", List.of("client:useblock 0 0 2")),
-                    new Step(43, "suggestion box: close clicked", List.of("client:screen", "client:click close")),
+                    new Step(43, "suggestion box: close clicked", List.of("client:screen", "client:screenshot window_suggestion_box", "client:click close")),
                     new Step(44, "suggestion box: after close", List.of("client:screen", "client:close", "setblock ~ ~ ~2 air")),
-                    new Step(47, "scenario done", List.of())),
+                    // The item reaches the client a tick later, so it is used in the next step.
+                    new Step(46, "handbook: in hand", List.of("item replace entity @s weapon.mainhand with mc_talking:colony_handbook")),
+                    new Step(47, "handbook: opened", List.of("client:useitem")),
+                    new Step(49, "handbook: close clicked", List.of("client:screen", "client:screenshot window_handbook", "client:click close")),
+                    new Step(50, "handbook: after close", List.of("client:screen", "client:close", "item replace entity @s weapon.mainhand with air")),
+                    new Step(52, "scenario done", List.of())),
+            // A brand-new colony: the welcome, a chat with the citizen who gave it (typed, as with
+            // /citizen_chat), asking how to tell everyone something, then the next introduction.
+            "firstday", List.of(
+                    new Step(3, "day: the player arrives", List.of("time set 1000", "weather clear",
+                            "awaitever 240 walks up to \\w+ about mc_talking:welcome")),
+                    new Step(4, "the welcome is said", List.of("awaitever 90 \"type\":\"said\".*\"kind\":\"ADDON_AMBIENT\"")),
+                    new Step(6, "talk to the citizen next to you", List.of("citizen_chat on", "playtest talk", "await 60 -> ACTIVE")),
+                    new Step(8, "asks about the day", List.of("chat:Hey! How's your day going?",
+                            "await 60 \"type\":\"said\".*\"kind\":\"PLAYER\"")),
+                    new Step(14, "asks how to tell everyone", List.of(
+                            "chat:How can I tell everyone in the colony something? Can you do it for me?",
+                            "await 60 \"type\":\"said\".*\"kind\":\"PLAYER\"")),
+                    new Step(28, "walks away", List.of("tp @s ~48 ~ ~")),
+                    new Step(45, "waits for the next introduction", List.of("playtest home",
+                            "await 420 walks up to \\w+ about (?!mc_talking:welcome)")),
+                    new Step(46, "the introduction is said", List.of("await 90 \"type\":\"said\".*\"kind\":\"ADDON_AMBIENT\"")),
+                    new Step(50, "scenario done", List.of())),
+            // A pair of citizens chatting by day, then night: chats end when they fall asleep, none start.
+            "night", List.of(
+                    new Step(20, "day: standing in the colony", List.of("playtest home", "time set 6000", "weather clear",
+                            "await 300 \\[RandomConv\\] Starting conversation")),
+                    new Step(25, "night falls", List.of("time set 18000")),
+                    new Step(90, "citizens are asleep", List.of("playtest probe")),
+                    new Step(180, "still night", List.of("playtest probe")),
+                    new Step(185, "scenario done", List.of())),
             // The mayor's hat on a citizen mayor and on the player, then the mayor's report.
             "mayor", List.of(
                     new Step(20, "day: standing in the colony", List.of("playtest home", "time set 6000", "weather clear")),
@@ -100,6 +134,10 @@ final class PlaytestScenario {
     private static List<Step> steps = List.of();
     private static int ticksInWorld;
     private static int next;
+    private static @Nullable Pattern awaiting;
+    private static String awaitText = "";
+    private static int awaitFrom;
+    private static int awaitTicksLeft;
 
     private PlaytestScenario() {
     }
@@ -110,6 +148,7 @@ final class PlaytestScenario {
         steps = SCENARIOS.get(name);
         if (steps == null) throw new IllegalArgumentException("Unknown playtest scenario " + name
                 + ", known: " + SCENARIOS.keySet());
+        LogTap.install();
         PlaytestMod.LOGGER.info("Running playtest scenario {}", name);
         /*? if forge {*/
         /*MinecraftForge.EVENT_BUS.addListener((TickEvent.ClientTickEvent event) -> {
@@ -123,21 +162,59 @@ final class PlaytestScenario {
 
     private static void tick() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || next >= steps.size()) return;
+        if (mc.player == null || mc.level == null || next >= steps.size() && awaiting == null) return;
+        if (ticksInWorld == 0) LogTap.install();
+        // While waiting for something to happen, the scenario clock stands still.
+        if (awaiting != null && !awaited()) return;
+        if (next >= steps.size()) {
+            finish(mc);
+            return;
+        }
         ticksInWorld++;
         Step step = steps.get(next);
         if (ticksInWorld < step.atSeconds() * 20) return;
         next++;
+        int stepStart = LogTap.size();
         mark(step.mark());
         for (String command : step.commands()) {
             if (command.startsWith("chat:")) mc.player.connection.sendChat(command.substring("chat:".length()));
             else if (command.startsWith("client:")) client(mc, command.substring("client:".length()));
+            else if (command.startsWith("await ") || command.startsWith("awaitever ")) await(command, stepStart);
             else mc.player.connection.sendCommand(command);
         }
-        if (next == steps.size()) {
-            PlaytestMod.LOGGER.info("TC_PLAYTEST_SCENARIO_DONE");
-            mc.stop();
+        if (next == steps.size() && awaiting == null) finish(mc);
+    }
+
+    private static void finish(Minecraft mc) {
+        next = steps.size() + 1;
+        PlaytestMod.LOGGER.info("TC_PLAYTEST_SCENARIO_DONE");
+        mc.stop();
+    }
+
+    /**
+     * {@code await <seconds> <regex>}: waits until a log line logged since this step started matches
+     * ({@code awaitever}: since the game started), at most that long. Logged as TC_AWAIT matched/timeout,
+     * which the scenario checks read.
+     */
+    private static void await(String command, int stepStart) {
+        String[] parts = command.split(" ", 3);
+        awaiting = Pattern.compile(parts[2]);
+        awaitText = parts[2];
+        awaitFrom = parts[0].equals("awaitever") ? 0 : stepStart;
+        awaitTicksLeft = Integer.parseInt(parts[1]) * 20;
+    }
+
+    private static boolean awaited() {
+        String line = LogTap.find(awaiting, awaitFrom);
+        if (line != null) {
+            PlaytestMod.LOGGER.info("TC_AWAIT matched {} :: {}", awaitText, line.length() > 300 ? line.substring(0, 300) : line);
+        } else if (--awaitTicksLeft <= 0) {
+            PlaytestMod.LOGGER.warn("TC_AWAIT timeout {}", awaitText);
+        } else {
+            return false;
         }
+        awaiting = null;
+        return true;
     }
 
     private static void client(Minecraft mc, String command) {
@@ -155,6 +232,9 @@ final class PlaytestScenario {
             }
             case "useblock" -> useBlock(mc, parts.length > 1 ? parts[1] : "0 0 0");
             case "close" -> mc.setScreen(null);
+            case "useitem" -> {
+                if (mc.gameMode != null) mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+            }
             case "click" -> click(mc, parts.length > 1 ? parts[1] : "");
             case "screen" -> PlaytestMod.LOGGER.info("TC_SCENARIO_SCREEN {}", mc.screen == null ? "none" : mc.screen.getClass().getSimpleName());
             case "hud" -> mc.options.hideGui = parts.length > 1 && parts[1].equals("off");
