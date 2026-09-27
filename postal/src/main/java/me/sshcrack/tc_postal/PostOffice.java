@@ -83,15 +83,17 @@ public final class PostOffice {
             tell(player, handler.getName() + " is only visiting and cannot take letters.");
             return false;
         }
-        int index = LetterText.matchRecipient(text.title(), citizens.stream().map(ICitizenData::getName).toList());
+        int index = LetterText.matchRecipient(text.title(), text.pages().isEmpty() ? null : text.pages().get(0),
+                citizens.stream().map(ICitizenData::getName).toList());
         if (index == LetterText.AMBIGUOUS) {
             tell(player, "Several citizens of " + colony.getName() + " are called \"" + text.title()
-                    + "\". Sign the letter with their full name.");
+                    + "\". Sign it with their first and last name, or start the letter with \"Dear <full name>,\".");
             return false;
         }
         if (index == LetterText.NOT_FOUND) {
             tell(player, "Nobody in " + colony.getName() + " is called \"" + text.title()
-                    + "\". Sign the letter with the recipient's name as its title.");
+                    + "\". Sign the letter with the recipient's name as its title (a first or last name is enough), "
+                    + "or start it with \"Dear <name>,\".");
             return false;
         }
         ICitizenData recipient = citizens.get(index);
