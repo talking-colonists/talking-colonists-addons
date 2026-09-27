@@ -78,8 +78,10 @@ public final class Elections {
     static final Duration SPEECH_DURATION = Duration.ofSeconds(30);
     private static final int CHECK_INTERVAL_TICKS = 100;
     private static final int SPEECH_RETRY_TICKS = 60;
-    /** About a minute of waiting for a quiet moment. */
-    private static final int MAX_SPEECH_ATTEMPTS = 20;
+    /** How long a busy candidate may take to get free and walk over; then they speak where they stand. */
+    private static final int SPEECH_WALK_TICKS = 20 * 90;
+    /** How long a campaign speech is waited for, and voting held back for it. */
+    private static final int SPEECH_WAIT_TICKS = 20 * 180;
     private static final Gson GSON = new Gson();
 
     /** Someone standing for mayor. Citizens are keyed by their entity UUID, as in relationship memory. */
@@ -485,7 +487,7 @@ public final class Elections {
     }
 
     private void campaignEnds(IColony colony, Election election) {
-        if (election.rivalWriting) return;
+        if (election.rivalWriting || speechDue(election)) return;
         long players = election.candidates.stream().filter(candidate -> !candidate.citizen).count();
         boolean lone = players == 1 && election.candidates.size() == 1;
         if ((lone || incumbent(colony, election) != null) && !election.rivalAsked
@@ -564,61 +566,85 @@ public final class Elections {
     /**
      * A citizen candidate makes their case aloud, as players do: they walk up to a player standing
      * against them (else the nearest colony member) with their campaign pamphlet and give the speech,
-     * or give it where they stand when nobody can be reached. The colony hears what was said.
+     * or give it where they stand when nobody can be reached. A candidate who is busy (at the campfire,
+     * in a conversation) does it once they are free; the vote waits for it a while. The colony hears
+     * what was said.
      */
     private void campaignSpeech(IColony colony, Election election, Candidate candidate, AbstractEntityCitizen speaker,
                                 List<String> opponents, boolean incumbent) {
-        ServerPlayer listener = listener(colony, election, speaker);
-        String key = "speech|" + election.id + "|" + candidate.citizenId;
-        boolean walking = listener != null && couriers.bring(key, speaker, listener, "a campaign pamphlet",
-                () -> WrittenBooks.create("Vote " + candidate.name.split(" ")[0], candidate.name, WrittenBooks.ORIGINAL,
-                        BookPages.paginate(ElectionText.pamphlet(candidate.name, candidate.slogan, candidate.platform), BookPages.PAGE_CHARS)
-                                .stream().map(page -> (Component) Component.literal(page)).toList()),
-                delivered -> speak(colony, election, candidate, speaker, opponents, incumbent,
-                        delivered ? listener.getGameProfile().getName() : null));
-        if (!walking) speak(colony, election, candidate, speaker, opponents, incumbent, null);
+        speeches.add(new PendingSpeech(colony, election, candidate, speaker, opponents, incumbent, ticks));
     }
 
-    private void speak(IColony colony, Election election, Candidate candidate, AbstractEntityCitizen speaker,
-                       List<String> opponents, boolean incumbent, @Nullable String listener) {
-        speeches.add(new PendingSpeech(colony, election, candidate, speaker,
-                ElectionText.rivalSpeech(colony.getName(), candidate.slogan, candidate.platform, opponents, incumbent, listener)));
-    }
-
-    /** Gives waiting campaign speeches a try; one that meets someone else talking waits a few seconds. */
+    /** Moves waiting campaign speeches along: walk over when free, then speak once nobody nearby is talking. */
     private void trySpeeches() {
         for (PendingSpeech speech : List.copyOf(speeches)) {
-            if (speech.inFlight || ticks < speech.nextTry) continue;
-            if (!state.elections.contains(speech.election) || speech.election.voting || !speech.speaker.isAlive()
-                    || speech.attempts >= MAX_SPEECH_ATTEMPTS) {
-                if (speech.attempts >= MAX_SPEECH_ATTEMPTS) {
-                    TownHall.LOGGER.info("{} found no quiet moment for a campaign speech", speech.candidate.name);
+            if (speech.busy || ticks < speech.nextTry) continue;
+            if (!state.elections.contains(speech.election) || !speech.speaker.isAlive() || speech.speaker.isRemoved()
+                    || ticks - speech.since > SPEECH_WAIT_TICKS) {
+                if (ticks - speech.since > SPEECH_WAIT_TICKS) {
+                    TownHall.LOGGER.info("{} found no moment for a campaign speech", speech.candidate.name);
                 }
                 speeches.remove(speech);
                 continue;
             }
-            speech.attempts++;
-            speech.inFlight = true;
-            CitizenConversationService.requestAmbientLine(speech.speaker, speech.directive).whenComplete((result, error) -> server.execute(() -> {
-                speech.inFlight = false;
-                if (error == null && result.status() == AmbientLineResult.Status.REJECTED && retryable(result.rejectionReason())) {
-                    speech.nextTry = ticks + SPEECH_RETRY_TICKS; // someone nearby is talking: wait for a quiet moment
-                    return;
-                }
-                speeches.remove(speech);
-                if (error != null || !result.completed() || result.transcript().isBlank()) {
-                    TownHall.LOGGER.info("{}'s campaign speech was not given: {}", speech.candidate.name,
-                            error != null ? error.toString() : result.status() + " " + result.detail());
-                    return;
-                }
-                if (!state.elections.contains(speech.election)) return;
-                String said = ElectionText.withoutSpeaker(speech.candidate.name, result.transcript());
-                announce(speech.colony, speech.candidate, speech.speaker.blockPosition(), ElectionText.speech(speech.candidate.name, said));
-                speech.candidate.platform = ElectionText.cut(speech.candidate.platform + " Speech: " + said, ElectionText.MAX_PLATFORM_CHARS);
-                save();
-                TownHall.LOGGER.info("{} gave a campaign speech: {}", speech.candidate.name, said);
-            }));
+            speech.nextTry = ticks + SPEECH_RETRY_TICKS;
+            if (!speech.walked) walk(speech);
+            else speak(speech);
         }
+    }
+
+    /** Walks over with the pamphlet; while the candidate cannot go (busy, reserved) it is tried again. */
+    private void walk(PendingSpeech speech) {
+        ServerPlayer listener = listener(speech.colony, speech.election, speech.speaker);
+        if (listener == null || ticks - speech.since > SPEECH_WALK_TICKS) {
+            speech.walked = true; // nobody to walk to, or no chance to: speak where they stand
+            return;
+        }
+        Candidate candidate = speech.candidate;
+        speech.busy = couriers.bring("speech|" + speech.election.id + "|" + candidate.citizenId, speech.speaker, listener,
+                "a campaign pamphlet",
+                () -> WrittenBooks.create("Vote " + candidate.name.split(" ")[0], candidate.name, WrittenBooks.ORIGINAL,
+                        BookPages.paginate(ElectionText.pamphlet(candidate.name, candidate.slogan, candidate.platform), BookPages.PAGE_CHARS)
+                                .stream().map(page -> (Component) Component.literal(page)).toList()),
+                delivered -> {
+                    speech.busy = false;
+                    speech.walked = true;
+                    speech.nextTry = ticks;
+                    if (delivered) speech.listener = listener.getGameProfile().getName();
+                });
+    }
+
+    private void speak(PendingSpeech speech) {
+        if (speech.election.voting) {
+            speeches.remove(speech);
+            return;
+        }
+        speech.busy = true;
+        String directive = ElectionText.rivalSpeech(speech.colony.getName(), speech.candidate.slogan, speech.candidate.platform,
+                speech.opponents, speech.incumbent, speech.listener);
+        CitizenConversationService.requestAmbientLine(speech.speaker, directive).whenComplete((result, error) -> server.execute(() -> {
+            speech.busy = false;
+            if (error == null && result.status() == AmbientLineResult.Status.REJECTED && retryable(result.rejectionReason())) {
+                return; // someone nearby is talking, or the candidate is busy: try again in a moment
+            }
+            speeches.remove(speech);
+            if (error != null || !result.completed() || result.transcript().isBlank()) {
+                TownHall.LOGGER.info("{}'s campaign speech was not given: {}", speech.candidate.name,
+                        error != null ? error.toString() : result.status() + " " + result.detail());
+                return;
+            }
+            if (!state.elections.contains(speech.election)) return;
+            String said = ElectionText.withoutSpeaker(speech.candidate.name, result.transcript());
+            announce(speech.colony, speech.candidate, speech.speaker.blockPosition(), ElectionText.speech(speech.candidate.name, said));
+            speech.candidate.platform = ElectionText.cut(speech.candidate.platform + " Speech: " + said, ElectionText.MAX_PLATFORM_CHARS);
+            save();
+            TownHall.LOGGER.info("{} gave a campaign speech: {}", speech.candidate.name, said);
+        }));
+    }
+
+    /** Whether a citizen candidate of the election still owes their speech; voting waits for it a while. */
+    private boolean speechDue(Election election) {
+        return speeches.stream().anyMatch(speech -> speech.election == election);
     }
 
     private static boolean retryable(@Nullable AmbientLineResult.RejectionReason reason) {
@@ -626,23 +652,29 @@ public final class Elections {
                 || reason == AmbientLineResult.RejectionReason.CAPACITY_EXHAUSTED || reason == AmbientLineResult.RejectionReason.BUDGET_EXCEEDED;
     }
 
-    /** A citizen candidate's campaign speech, waiting for a quiet moment. */
+    /** A citizen candidate's campaign speech on its way: walking over, then waiting for a quiet moment. */
     private static final class PendingSpeech {
         final IColony colony;
         final Election election;
         final Candidate candidate;
         final AbstractEntityCitizen speaker;
-        final String directive;
-        int attempts;
+        final List<String> opponents;
+        final boolean incumbent;
+        final int since;
+        boolean walked;
+        boolean busy;
         int nextTry;
-        boolean inFlight;
+        @Nullable String listener;
 
-        PendingSpeech(IColony colony, Election election, Candidate candidate, AbstractEntityCitizen speaker, String directive) {
+        PendingSpeech(IColony colony, Election election, Candidate candidate, AbstractEntityCitizen speaker,
+                      List<String> opponents, boolean incumbent, int since) {
             this.colony = colony;
             this.election = election;
             this.candidate = candidate;
             this.speaker = speaker;
-            this.directive = directive;
+            this.opponents = opponents;
+            this.incumbent = incumbent;
+            this.since = since;
         }
     }
 
