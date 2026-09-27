@@ -46,10 +46,16 @@ gradle=(./gradlew ":playtest:$version:runScenarioClient" "-PtcScenario=$scenario
 if [[ -z "${TC_SCENARIO_VISIBLE:-}" ]] && command -v xvfb-run >/dev/null; then
   gradle=(xvfb-run -a -s "-screen 0 1280x720x24" "${gradle[@]}")
 fi
+# A stale log from an earlier run must never be checked as this one.
+rm -f "$run/logs/latest.log"
 echo "[$version] running scenario \"$scenario\" (a few minutes)..."
 status=0
 timeout --kill-after=30 "${TC_SCENARIO_TIMEOUT:-900}" "${gradle[@]}" > "build/scenario/gradle.log" 2>&1 || status=$?
 
+if [[ ! -f "$run/logs/latest.log" ]]; then
+  echo "The game did not start (exit $status); see build/scenario/gradle.log" >&2
+  exit 1
+fi
 log="build/scenario/$scenario-$version-$(date +%Y%m%d-%H%M%S).log"
 cp "$run/logs/latest.log" "$log"
 if ! grep -q "TC_PLAYTEST_SCENARIO_DONE" "$log"; then

@@ -3,6 +3,9 @@ package me.sshcrack.tc_playtest;
 import com.google.gson.JsonObject;
 import com.ldtteam.blockui.BOScreen;
 import com.ldtteam.blockui.Pane;
+import com.ldtteam.blockui.controls.AbstractTextElement;
+import com.ldtteam.blockui.controls.TextField;
+import com.ldtteam.blockui.views.View;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
@@ -36,7 +39,8 @@ import java.util.regex.Pattern;
  * {@code client:use} (right-click the block looked at), {@code client:useitem} (use the held item), {@code client:useblock <dx> <dy> <dz>} (right-click the
  * block at that offset from the player), {@code client:close} (the open screen) and
  * {@code client:screenshot <name>} (saved to the run's {@code screenshots/} folder), {@code client:click <pane id>}
- * (a real mouse click on a pane of the open BlockUI window) and {@code client:screen} (logs the open screen).
+ * (a real mouse click on a pane of the open BlockUI window), {@code client:type <pane id> <text>} (into a text field),
+ * {@code client:dump <pane id>} (logs the texts shown in it) and {@code client:screen} (logs the open screen).
  * {@code await <seconds> <regex>} holds the scenario clock until a log line matches (see {@link LogTap}).
  * What a run must show is checked afterwards by {@code scripts/scenario-checks.py}.
  */
@@ -50,6 +54,9 @@ final class PlaytestScenario {
             "campfire", List.of(
                     new Step(20, "day: standing in the colony", List.of("playtest home", "time set 6000")),
                     new Step(110, "dusk: campfire night starts", List.of("time set 12500", "campfire start")),
+                    // #259: the guests sit in a ring around the fire.
+                    new Step(170, "screenshot: the ring at the fire", List.of("tp @s ~ ~ ~ facing entity @e[type=minecolonies:citizen,sort=nearest,limit=1]", "client:camera back", "client:screenshot campfire_ring",
+                            "client:camera first")),
                     new Step(200, "player speaks up at the fire",
                             List.of("chat:Excuse me, can one of you tell me what lies beyond the hills to the east?")),
                     new Step(320, "campfire stopped", List.of("campfire stop")),
@@ -59,6 +66,8 @@ final class PlaytestScenario {
             "election", List.of(
                     new Step(20, "day: at the town hall", List.of("playtest home", "time set 6000", "weather clear")),
                     new Step(25, "the player stands for mayor with the campaign book", List.of("playtest stand")),
+                    // #256: the speech capture shows "Listening... N s left", counting down.
+                    new Step(30, "screenshot: the speech countdown", List.of("client:screenshot speech_countdown")),
                     new Step(60, "the campaign is rushed: a citizen stands", List.of("townhall rush")),
                     new Step(330, "scenario done", List.of())),
             // Each addon window opens, and its close button closes it (a real mouse click).
@@ -100,6 +109,46 @@ final class PlaytestScenario {
                             "await 420 walks up to \\w+ about (?!mc_talking:welcome)")),
                     new Step(46, "the introduction is said", List.of("await 90 \"type\":\"said\".*\"kind\":\"ADDON_AMBIENT\"")),
                     new Step(50, "scenario done", List.of())),
+            // A new residence is ordered from the colony's builder; the builder and another citizen are asked
+            // how it is going (their answers are compared with the logged TC_BUILD state).
+            "construction", List.of(
+                    new Step(20, "day: at home", List.of("playtest home", "time set 1000", "weather clear")),
+                    new Step(22, "a new residence is ordered", List.of("playtest build", "await 300 TC_BUILD claimed by")),
+                    new Step(90, "goes to the builder", List.of("playtest goto builder")),
+                    new Step(92, "talks to the builder", List.of("citizen_chat on", "playtest talk", "await 60 -> ACTIVE")),
+                    new Step(94, "asks the builder about the house", List.of(
+                            "chat:Hey! How is the new house coming along? Do you need anything for it?",
+                            "await 60 \"type\":\"said\".*\"kind\":\"PLAYER\"")),
+                    new Step(110, "walks away", List.of("playtest home", "tp @s ~ ~ ~6")),
+                    new Step(125, "talks to another citizen", List.of("playtest talk", "await 60 -> ACTIVE")),
+                    new Step(127, "asks another citizen about the house", List.of(
+                            "chat:Do you know how the new house is coming along?",
+                            "await 60 \"type\":\"said\".*\"kind\":\"PLAYER\"")),
+                    new Step(140, "scenario done", List.of())),
+            // A notice is posted on the board by hand (typed and clicked), word spreads, replies are collected.
+            "notice", List.of(
+                    new Step(20, "day: in the colony", List.of("playtest home", "time set 1000", "weather clear",
+                            "item replace entity @s weapon.mainhand with air", "execute align xyz run tp @s ~0.5 ~ ~0.5 0 0")),
+                    new Step(22, "notice board placed", List.of("setblock ~ ~ ~2 tc_noticeboard:notice_board[facing=north]",
+                            "tp @s ~ ~ ~ facing ~ ~0.5 ~2")),
+                    new Step(24, "notice board opened", List.of("client:useblock 0 0 2")),
+                    new Step(26, "notice posted", List.of("client:type titleInput Harvest fair",
+                            "client:type bodyInput Next Sunday we hold a harvest fair at the town hall. Bring your best pumpkins and something to share!",
+                            "client:screenshot notice_typed", "client:click post")),
+                    new Step(28, "window closed", List.of("client:close")),
+                    new Step(150, "replies are collected", List.of("noticeboard rush", "await 120 Pinned \\d+ replies")),
+                    new Step(155, "the board is read again", List.of("client:useblock 0 0 2")),
+                    new Step(157, "replies on the board", List.of("client:dump replies", "client:dump reach",
+                            "client:screenshot notice_replies", "client:close")),
+                    new Step(160, "scenario done", List.of())),
+            // The colony from above, to look at its buildings.
+            "overview", List.of(
+                    new Step(15, "above the plaza", List.of("playtest home", "time set 6000", "weather clear", "client:hud off",
+                            "gamemode spectator", "tp @s ~ ~35 ~-15 facing ~ ~ ~25")),
+                    new Step(18, "screenshot: the colony", List.of("client:screenshot colony_overview")),
+                    new Step(45, "screenshot: the colony later", List.of("client:screenshot colony_overview_45")),
+                    new Step(90, "screenshot: the colony much later", List.of("client:screenshot colony_overview_90")),
+                    new Step(91, "scenario done", List.of())),
             // A pair of citizens chatting by day, then night: chats end when they fall asleep, none start.
             "night", List.of(
                     new Step(20, "day: standing in the colony", List.of("playtest home", "time set 6000", "weather clear",
@@ -236,6 +285,8 @@ final class PlaytestScenario {
                 if (mc.gameMode != null) mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
             }
             case "click" -> click(mc, parts.length > 1 ? parts[1] : "");
+            case "type" -> type(mc, parts.length > 1 ? parts[1] : "");
+            case "dump" -> dump(mc, parts.length > 1 ? parts[1] : "");
             case "screen" -> PlaytestMod.LOGGER.info("TC_SCENARIO_SCREEN {}", mc.screen == null ? "none" : mc.screen.getClass().getSimpleName());
             case "hud" -> mc.options.hideGui = parts.length > 1 && parts[1].equals("off");
             case "screenshot" -> Screenshot.grab(mc.gameDirectory, (parts.length > 1 ? parts[1] : "scenario") + ".png",
@@ -283,6 +334,37 @@ final class PlaytestScenario {
             PlaytestMod.LOGGER.info("TC_SCENARIO_CLICK {} at {},{}: handled={}", id, (int) mouseX, (int) mouseY, handled);
         } catch (ReflectiveOperationException e) {
             PlaytestMod.LOGGER.warn("TC_SCENARIO_CLICK {}: {}", id, e.toString());
+        }
+    }
+
+    /** "<pane id> <text>": types the text into that text field of the open BlockUI window. */
+    private static void type(Minecraft mc, String arguments) {
+        String[] parts = arguments.split(" ", 2);
+        if (!(mc.screen instanceof BOScreen screen)
+                || !(screen.getWindow().findPaneByID(parts[0]) instanceof TextField field)) {
+            PlaytestMod.LOGGER.warn("TC_SCENARIO_TYPE {}: no such text field in an open window", parts[0]);
+            return;
+        }
+        field.setText(parts.length > 1 ? parts[1] : "");
+        PlaytestMod.LOGGER.info("TC_SCENARIO_TYPE {}", parts[0]);
+    }
+
+    /** Logs every text shown inside that pane of the open BlockUI window (e.g. a list of replies) as TC_SCENARIO_TEXT. */
+    private static void dump(Minecraft mc, String id) {
+        Pane pane = mc.screen instanceof BOScreen screen ? screen.getWindow().findPaneByID(id) : null;
+        if (pane == null) {
+            PlaytestMod.LOGGER.warn("TC_SCENARIO_TEXT {}: no such pane in an open window", id);
+            return;
+        }
+        dump(id, pane);
+    }
+
+    private static void dump(String id, Pane pane) {
+        if (pane instanceof AbstractTextElement text && !text.getTextAsString().isBlank()) {
+            PlaytestMod.LOGGER.info("TC_SCENARIO_TEXT {} :: {}", id, text.getTextAsString().replace('\n', ' '));
+        }
+        if (pane instanceof View view) {
+            for (Pane child : view.getChildren()) dump(id, child);
         }
     }
 

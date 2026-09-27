@@ -15,6 +15,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -30,6 +31,7 @@ import java.util.List;
 public final class PlaytestColony {
     public static final String NAME = "Playtest Hollow";
     private static final int CITIZENS = 6;
+    static final String STYLE = "Colonial";
 
     private PlaytestColony() {
     }
@@ -44,20 +46,22 @@ public final class PlaytestColony {
         server.getGameRules().getRule(GameRules.RULE_WEATHER_CYCLE).set(false, server);
 
         BlockPos center = ground(level, player.blockPosition().offset(8, 0, 0));
-        IColony colony = IColonyManager.getInstance().createColony(level, center, player, NAME, "Colonial");
+        IColony colony = IColonyManager.getInstance().createColony(level, center, player, NAME, STYLE);
         if (colony == null) {
             player.sendSystemMessage(Component.literal("[Playtest] MineColonies refused to create a colony here."));
             return false;
         }
-        IBuilding townHall = hut(level, colony, player, ModBlocks.blockHutTownHall, center, 1);
-        IBuilding school = hut(level, colony, player, ModBlocks.blockHutSchool, ground(level, center.offset(10, 0, 0)), 1);
-        IBuilding library = hut(level, colony, player, ModBlocks.blockHutLibrary, ground(level, center.offset(10, 0, 10)), 1);
-        IBuilding tavern = hut(level, colony, player, ModBlocks.blockHutTavern, ground(level, center.offset(-10, 0, 0)), 1);
+        // Finished buildings on a grid south of the plaza (the colony's center), pasted like the build
+        // tool's instant placement in creative: beds to sleep in, rooms to work in.
+        IBuilding townHall = built(level, colony, player, ModBlocks.blockHutTownHall, center.offset(-45, 0, 22), 1, "fundamentals/townhall");
+        IBuilding school = built(level, colony, player, ModBlocks.blockHutSchool, center.offset(-15, 0, 22), 1, "education/school");
+        IBuilding library = built(level, colony, player, ModBlocks.blockHutLibrary, center.offset(15, 0, 22), 1, "education/library");
+        IBuilding tavern = built(level, colony, player, ModBlocks.blockHutTavern, center.offset(45, 0, 22), 1, "fundamentals/tavern");
         // A working builder, so placed huts actually get built (a level 0 builder's hut has no builder).
-        IBuilding builder = hut(level, colony, player, ModBlocks.blockHutBuilder, ground(level, center.offset(-10, 0, -10)), 1);
+        IBuilding builder = built(level, colony, player, ModBlocks.blockHutBuilder, center.offset(-30, 0, 52), 1, "fundamentals/builder");
         List<IBuilding> homes = List.of(
-                hut(level, colony, player, ModBlocks.blockHutHome, ground(level, center.offset(0, 0, 10)), 3),
-                hut(level, colony, player, ModBlocks.blockHutHome, ground(level, center.offset(-10, 0, 10)), 3));
+                built(level, colony, player, ModBlocks.blockHutHome, center.offset(0, 0, 52), 3, "fundamentals/residence"),
+                built(level, colony, player, ModBlocks.blockHutHome, center.offset(30, 0, 52), 3, "fundamentals/residence"));
         level.setBlock(ground(level, center.offset(0, 0, -6)), Blocks.CAMPFIRE.defaultBlockState(), 3);
 
         for (int i = 0; i < CITIZENS; i++) {
@@ -81,13 +85,49 @@ public final class PlaytestColony {
         return IColonyManager.getInstance().getIColonyByOwner(player.serverLevel(), player);
     }
 
-    private static BlockPos ground(ServerLevel level, BlockPos pos) {
+    static BlockPos ground(ServerLevel level, BlockPos pos) {
         return level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, pos);
     }
 
-    /** Places a hut the way a player would and raises it to {@code buildingLevel}. */
-    private static @Nullable IBuilding hut(ServerLevel level, IColony colony, ServerPlayer player,
-                                           AbstractBlockHut<?> hut, BlockPos pos, int buildingLevel) {
+    /**
+     * The finished building at {@code pos} (its hut there), pasted with Structurize's paste command as a
+     * creative player would, then placed at once instead of over the next minutes. Falls back to a bare
+     * hut when the paste does not produce the building.
+     */
+    private static @Nullable IBuilding built(ServerLevel level, IColony colony, ServerPlayer player, AbstractBlockHut<?> hut,
+                                             BlockPos pos, int buildingLevel, String blueprint) {
+        BlockPos anchor = ground(level, pos);
+        String path = blueprint + buildingLevel + ".blueprint";
+        GameType mode = player.gameMode.getGameModeForPlayer();
+        player.setGameMode(GameType.CREATIVE);
+        try {
+            level.getServer().getCommands().performPrefixedCommand(player.createCommandSourceStack().withPermission(4),
+                    "structurize paste %d %d %d \"%s\" \"%s\"".formatted(anchor.getX(), anchor.getY(), anchor.getZ(), STYLE,
+                            // The command wants dots for folders and adds ".blueprint" itself.
+                            (blueprint + buildingLevel).replace('/', '.')));
+        } finally {
+            player.setGameMode(mode);
+        }
+        int ticks = PlaytestPaste.finishQueued(level);
+        IBuilding building = IColonyManager.getInstance().getBuilding(level, anchor);
+        if (building == null || level.getBlockState(anchor).getBlock() != hut) {
+            PlaytestMod.LOGGER.warn("TC_COLONY pasting {} did not make the building; placing a bare hut", path);
+            return hut(level, colony, player, hut, anchor, buildingLevel, blueprint);
+        }
+        PlaytestMod.LOGGER.info("TC_COLONY pasted {} at {} ({} ticks)", path, anchor.toShortString(), ticks);
+        building.setStructurePack(STYLE);
+        building.setBlueprintPath(path);
+        building.setBuildingLevel(buildingLevel);
+        return building;
+    }
+
+    /**
+     * Places a hut the way a player would and raises it to {@code buildingLevel}. {@code blueprint} is its
+     * blueprint in the colony's style without the level, e.g. "fundamentals/residence": without it the
+     * building has no blueprint, so builders cannot build or upgrade it (and Structurize logs errors).
+     */
+    static @Nullable IBuilding hut(ServerLevel level, IColony colony, ServerPlayer player,
+                                   AbstractBlockHut<?> hut, BlockPos pos, int buildingLevel, String blueprint) {
         BlockState state = hut.defaultBlockState();
         level.setBlock(pos, state, 3);
         // An empty stack: a hut item would make Structurize look for a blueprint we do not place.
@@ -100,6 +140,8 @@ public final class PlaytestColony {
             PlaytestMod.LOGGER.warn("{} at {} did not register a building", hut, pos);
             return null;
         }
+        building.setStructurePack(STYLE);
+        building.setBlueprintPath(blueprint + Math.max(1, buildingLevel) + ".blueprint");
         building.setBuildingLevel(buildingLevel);
         return building;
     }

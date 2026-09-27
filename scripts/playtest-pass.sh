@@ -12,7 +12,7 @@ target="${1:-neoforge}"
 shift || true
 scenarios=("$@")
 if [[ ${#scenarios[@]} -eq 0 ]]; then
-  scenarios=(windows firstday campfire night election mayor)
+  scenarios=(windows firstday campfire night construction notice election mayor)
 fi
 pass="build/scenario/pass-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$pass"

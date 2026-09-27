@@ -144,10 +144,25 @@ def logged_none(name, pattern, start=None, end=None):
     return name, check
 
 
-def judged(name, rubric, **selector):
+def judged(name, rubric, facts=None, **selector):
+    """{facts}: a regex; matching log lines are given to the judge as what really happened in the game."""
     def check(run, judge):
-        return judge(rubric, transcript(run.spoken(**selector)))
+        text = rubric
+        if facts:
+            lines = [line["text"] for line in run.logged(facts)]
+            text += "\n\nWhat really happened in the game (from its log, oldest first):\n" + "\n".join(lines or ["(nothing logged)"])
+        return judge(text, transcript(run.spoken(**selector)))
     return name, check
+
+
+def talked_to_builder(run, judge):
+    went = run.logged(r"TC_GOTO next to the builder (.+)")
+    if not went:
+        return False, "never got to the builder"
+    builder = re.search(r"TC_GOTO next to the builder (.+)", went[0]["text"]).group(1)
+    talk = first_after(run, r"TC_TALK", "talks to the builder")
+    ok = talk is not None and talk["text"] == f"TC_TALK STARTED with {builder}"
+    return ok, talk["text"] if talk else "no conversation started"
 
 
 def introducer_writes_no_memory(run, judge):
@@ -250,7 +265,8 @@ SCENARIOS = {
         said_any("the player's question is answered", start="player speaks up", end="campfire stopped"),
         judged("the answer fits the question",
                "At the campfire the player asked: 'Can one of you tell me what lies beyond the hills to the east?'. "
-               "PASS if a citizen answers that question in character within these lines.",
+               "PASS if a citizen responds to that question in character within these lines; saying they have "
+               "never been there or do not know counts, as long as they respond to it. FAIL if nobody responds to it.",
                start="player speaks up", end="campfire stopped"),
     ],
     "night": [
@@ -279,6 +295,34 @@ SCENARIOS = {
                "or a barracks do); homes count fully from level 3; a placed hut is level 0 until a builder builds it. "
                "PASS if the mayor's report and proposals do not contradict these rules and are about the colony's "
                "actual needs.", start="the mayor reports", end="a ballot box"),
+    ],
+    "construction": [
+        logged_any("the builder takes the order", r"TC_BUILD claimed by"),
+        logged_none("the playtest buildings have blueprints", r"Error loading blueprint"),
+        ("the conversation is with the builder", talked_to_builder),
+        judged("the builder knows how the house is going",
+               "The player asked the colony's builder how the new house is coming along and whether they need anything. "
+               "PASS if the builder talks about building the house and what they say fits the game state below "
+               "(e.g. just started, how far along, or which materials are missing). FAIL if they seem unaware of it, "
+               "claim it is finished, or contradict the game state.",
+               facts=r"TC_BUILD", kind="PLAYER", start="asks the builder about the house", end="walks away"),
+        judged("another citizen knows the house is being built",
+               "The player asked a citizen who is not the builder how the new house is coming along. PASS if the "
+               "citizen knows a new house is being built and does not contradict the game state below (it is not "
+               "finished). FAIL if they seem unaware of it or say it is done.",
+               facts=r"TC_BUILD", kind="PLAYER", start="asks another citizen about the house"),
+    ],
+    "notice": [
+        logged_any("the notice is typed in", r"TC_SCENARIO_TYPE bodyInput"),
+        logged_any("word of the notice spreads", r"Word of .Harvest fair. has reached"),
+        logged_any("replies are pinned", r"Pinned [1-9]\d* replies"),
+        logged_any("the board shows the replies", r"TC_SCENARIO_TEXT replies :: "),
+        ("the replies are constructive", lambda run, judge: judge(
+            "The player posted a notice: 'Harvest fair: Next Sunday we hold a harvest fair at the town hall. Bring your "
+            "best pumpkins and something to share!'. These are citizens' written replies pinned under it. PASS if they "
+            "reply to the notice itself, constructively and in character (joy, questions, offers, gentle concerns). "
+            "FAIL if they ignore the notice, are hostile, or are all the same.",
+            "\n".join(line["text"].split(" :: ", 1)[1] for line in run.logged(r"TC_SCENARIO_TEXT replies :: ")))),
     ],
     "ambient": [
         said_any("citizens speak while the player stands in the colony"),
