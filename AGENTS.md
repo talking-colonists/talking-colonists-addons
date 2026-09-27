@@ -37,11 +37,19 @@ Playtests have caught every such mismatch so far; the doc exists so the design c
   Forge run on JDK 25 fails on signed classes, which does not reproduce locally.
 - In-game: `TC_ADDONS_KEY_FILE=… bash scripts/selftest.sh <addon> 1.21.1-neoforge 1.20.1-forge`
   runs the addon's `dev/DevSelfTest` on a headless server.
-- Scripted client: `bash scripts/scenario.sh <scenario> neoforge|forge [--fresh]` runs the timed
-  steps in `playtest/.../PlaytestScenario.java` as a real player, then prints the speech report.
-  Steps can be commands, `chat:<text>` (the player chats) or `client:…`: `camera`, `hud`,
-  `use`, `close`, and `screenshot <name>`, which saves to
-  `playtest/versions/<ver>/run/scenario/screenshots/`.
+- Scripted client: `bash scripts/scenario.sh <scenario> neoforge|forge [--fresh]` plays the steps in
+  `playtest/.../PlaytestScenario.java` as a real player in the playtest colony (finished buildings,
+  pasted like the build tool's creative placement), then prints the speech report and the scenario's
+  checks (`scripts/scenario-checks.py`: PASS/FAIL rules on the log, and an LLM judge for what a rule
+  cannot decide). Steps are commands, `chat:<text>`, `await <seconds> <regex>` or `await?` (may not happen) (holds the scenario
+  until a log line matches, e.g. a citizen's line) or `client:…`: `camera`, `hud`, `use`, `useitem`,
+  `useblock`, `close`, `click <pane>`, `type <pane> <text>`, `dump <pane>`, `screen` and
+  `screenshot <name>` (kept next to the log in `build/scenario/`). `/playtest talk`, `probe`,
+  `build` and `goto builder|citizen` help scenarios along. Screenshots are 1280x720 (GUI scale 3).
+- Automated playtest pass: `TC_ADDONS_KEY_FILE=… bash scripts/playtest-pass.sh [neoforge|forge]
+  [scenarios…]` runs every scenario on a fresh world (about 50 minutes) and writes
+  `build/scenario/pass-*/summary.md`. Run it before asking the maintainer to playtest, look at its
+  screenshots yourself, and when a playtest finds a new problem, add a scenario or check for it first.
 - Anything visual (models, textures, windows) gets an in-game screenshot on its PR. Push the image
   to the `pr-images` branch and link it with `?raw=true`.
 - Keep the in-game `/playtest` checklist (`playtest/.../Checklist.java`) and the addon's
