@@ -53,6 +53,8 @@ public final class PlaytestColony {
         IBuilding school = hut(level, colony, player, ModBlocks.blockHutSchool, ground(level, center.offset(10, 0, 0)), 1);
         IBuilding library = hut(level, colony, player, ModBlocks.blockHutLibrary, ground(level, center.offset(10, 0, 10)), 1);
         IBuilding tavern = hut(level, colony, player, ModBlocks.blockHutTavern, ground(level, center.offset(-10, 0, 0)), 1);
+        // A working builder, so placed huts actually get built (a level 0 builder's hut has no builder).
+        IBuilding builder = hut(level, colony, player, ModBlocks.blockHutBuilder, ground(level, center.offset(-10, 0, -10)), 1);
         List<IBuilding> homes = List.of(
                 hut(level, colony, player, ModBlocks.blockHutHome, ground(level, center.offset(0, 0, 10)), 3),
                 hut(level, colony, player, ModBlocks.blockHutHome, ground(level, center.offset(-10, 0, 10)), 3));
@@ -65,6 +67,7 @@ public final class PlaytestColony {
             if (home != null) home.getModule(BuildingModules.LIVING).assignCitizen(data);
             if (i == 0 && school != null) school.getModule(BuildingModules.TEACHER_WORK).assignCitizen(data);
             if (i == 1 && library != null) library.getModule(BuildingModules.STUDENT_WORK).assignCitizen(data);
+            if (i == 2 && builder != null) builder.getModule(BuildingModules.BUILDER_WORK).assignCitizen(data);
         }
         if (tavern != null) tavern.getModule(BuildingModules.TAVERN_VISITOR).spawnVisitor();
 
