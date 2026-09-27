@@ -189,9 +189,11 @@ final class PlaytestScenario {
             y += current.getY();
         }
         try {
+            // BOScreen maps a mouse position m to (m * mcScale - x) / renderScale; this is the inverse.
             double scale = screenField(screen, "renderScale");
-            double mouseX = screenField(screen, "x") + x * scale;
-            double mouseY = screenField(screen, "y") + y * scale;
+            double mcScale = screenField(screen, "mcScale");
+            double mouseX = (screenField(screen, "x") + x * scale) / mcScale;
+            double mouseY = (screenField(screen, "y") + y * scale) / mcScale;
             boolean handled = screen.mouseClicked(mouseX, mouseY, 0);
             screen.mouseReleased(mouseX, mouseY, 0);
             PlaytestMod.LOGGER.info("TC_SCENARIO_CLICK {} at {},{}: handled={}", id, (int) mouseX, (int) mouseY, handled);
