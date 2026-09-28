@@ -164,6 +164,12 @@ public class TownHall {
         bus.addListener((RegisterCommandsEvent event) -> TownHallCommands.register(event.getDispatcher()));
     }
 
+    /** Whether {@code player} may wear the mayor's hat: only while they are a sitting mayor. */
+    public static boolean mayWearHat(ServerPlayer player) {
+        Elections running = elections;
+        return running == null || running.isPlayerMayor(player.getUUID());
+    }
+
     /** The citizen mayor said something to a player: from then on, the player's answer to the proposal counts. */
     private static void heardMayor(ConversationUtteranceEvent event) {
         AbstractEntityCitizen citizen = event.citizen();

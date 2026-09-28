@@ -6,8 +6,11 @@ import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
+import me.sshcrack.tc_townhall.TownHall;
+import net.minecraft.server.level.ServerPlayer;
 /*? if neoforge {*/
 import net.minecraft.core.Holder;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.resources.ResourceLocation;
 /*?}*/
 /*? if forge {*/
@@ -20,7 +23,7 @@ import java.util.function.Consumer;
 *//*?}*/
 
 /**
- * The mayor's hat: the elected mayor wears it, a colonist on their head, a player when a citizen brings
+ * The mayor's hat: only the sitting mayor wears it, a colonist on their head, a player when a citizen brings
  * it to them after the election. It gives no protection. It is drawn with its item model (a top hat), so
  * its "armor texture" is the block atlas that model's textures live on.
  */
@@ -34,6 +37,11 @@ public final class MayorHatItem extends ArmorItem {
     }
 
     @Override
+    public boolean canEquip(ItemStack stack, EquipmentSlot armorType, LivingEntity entity) {
+        return armorType == EquipmentSlot.HEAD && (!(entity instanceof ServerPlayer player) || TownHall.mayWearHat(player));
+    }
+
+    @Override
     public @Nullable ResourceLocation getArmorTexture(ItemStack stack, Entity entity, EquipmentSlot slot, ArmorMaterial.Layer layer,
                                                       boolean innerModel) {
         return ResourceLocation.parse(BLOCK_ATLAS);
@@ -42,6 +50,11 @@ public final class MayorHatItem extends ArmorItem {
     /*? if forge {*/
     /*public MayorHatItem(ArmorMaterial material, Properties properties) {
         super(material, Type.HELMET, properties);
+    }
+
+    @Override
+    public boolean canEquip(ItemStack stack, EquipmentSlot armorType, Entity entity) {
+        return armorType == EquipmentSlot.HEAD && (!(entity instanceof ServerPlayer player) || TownHall.mayWearHat(player));
     }
 
     @Override

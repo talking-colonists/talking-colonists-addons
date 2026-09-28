@@ -1,9 +1,9 @@
 package me.sshcrack.tc_townhall.block;
 
+import com.minecolonies.api.creativetab.ModCreativeTabs;
 import me.sshcrack.tc_townhall.TownHall;
 import me.sshcrack.tc_townhall.item.MayorHatItem;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -128,9 +128,11 @@ public final class TownHallBlocks {
         ARMOR_MATERIALS.register(modBus);
         /*?}*/
         modBus.addListener((BuildCreativeModeTabContentsEvent event) -> {
-            if (event.getTabKey() != CreativeModeTabs.FUNCTIONAL_BLOCKS) return;
+            // With MineColonies' own items, where colony players look for them.
+            if (event.getTabKey() != ModCreativeTabs.GENERAL.getKey()) return;
             event.accept(SUGGESTION_BOX_ITEM.get());
             event.accept(BALLOT_BOX_ITEM.get());
+            event.accept(MAYOR_HAT.get());
         });
     }
 }
