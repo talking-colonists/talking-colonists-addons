@@ -11,6 +11,8 @@ import me.sshcrack.mc_talking.api.ApiFeature;
 import me.sshcrack.mc_talking.api.TalkingColonistsApi;
 import me.sshcrack.mc_talking.api.colony.AddonColonyEvent;
 import me.sshcrack.mc_talking.api.colony.ColonyEventService;
+import me.sshcrack.mc_talking.api.conversation.AmbientLineResult;
+import me.sshcrack.mc_talking.api.conversation.CitizenConversationService;
 import me.sshcrack.mc_talking.api.memory.AddonConfirmedOutcome;
 import me.sshcrack.mc_talking.api.memory.BroadcastPublishResult;
 import me.sshcrack.mc_talking.api.memory.BroadcastRequest;
@@ -35,6 +37,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import me.sshcrack.tc_townhall.block.TownHallBlocks;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
@@ -71,10 +75,21 @@ public final class Elections {
     static final int MIN_VOTERS = 2;
     static final int MAX_CANDIDATES = 4;
     static final int MAX_VOTES_IN_FLIGHT = 2;
+    /** This many voters vote one by one, in character (their reasons are quoted); the rest in batches. */
+    static final int INDIVIDUAL_VOTERS = 8;
+    static final int BATCH_VOTERS = 10;
     static final int MAX_VOTE_ATTEMPTS = 2;
     static final int MAX_QUOTES = 4;
     static final Duration SPEECH_DURATION = Duration.ofSeconds(30);
     private static final int CHECK_INTERVAL_TICKS = 100;
+    private static final int SPEECH_RETRY_TICKS = 60;
+    /** How long a busy candidate may take to get free and walk over; then they speak where they stand. */
+    private static final int SPEECH_WALK_TICKS = 20 * 90;
+    /**
+     * How long a campaign speech is waited for, and voting held back for it. A citizen who just chatted
+     * stays on the core's automatic cooldown for 2 minutes, and may be in another chat before that.
+     */
+    private static final int SPEECH_WAIT_TICKS = 20 * 300;
     private static final Gson GSON = new Gson();
 
     /** Someone standing for mayor. Citizens are keyed by their entity UUID, as in relationship memory. */
@@ -103,6 +118,7 @@ public final class Elections {
         public Map<Integer, String> voterNames = new HashMap<>();
         public Map<Integer, Integer> attempts = new HashMap<>();
         transient Set<Integer> inFlight = new HashSet<>();
+        transient boolean batchInFlight;
         transient boolean rivalWriting;
     }
 
@@ -110,8 +126,26 @@ public final class Elections {
         public String name = "";
         public boolean citizen;
         public UUID id = new UUID(0, 0);
+        /** The citizen's colony id, -1 for a player (or a mayor elected before it was saved). */
+        public int citizenId = -1;
         public int sinceDay;
         public String result = "";
+        /** The campaign they were elected on. */
+        public String platform = "";
+        public List<Office.Promise> promises = new ArrayList<>();
+        /** Attempts to read the promises out of the platform. */
+        public int promiseAttempts;
+        public int lastReportDay = -1;
+        /** Need id → the day it began (it has lasted since). */
+        public Map<String, Integer> needSince = new HashMap<>();
+        /** Need id → how often the mayor reported it while it lasted. */
+        public Map<String, Integer> needReported = new HashMap<>();
+        /** The proposal waiting for an answer, or accepted and not done yet. */
+        public @Nullable Office.Proposal proposal;
+        /** Finished proposals, oldest first. */
+        public List<Office.Proposal> proposals = new ArrayList<>();
+        /** A player mayor received the mayor's hat. */
+        public boolean hatDelivered;
     }
 
     /** The results book, waiting for a citizen to bring it to a player candidate. */
@@ -133,7 +167,9 @@ public final class Elections {
     private final MinecraftServer server;
     private final Path file;
     private final Couriers couriers;
+    private final List<PendingSpeech> speeches = new ArrayList<>();
     private final ElectionBars bars;
+    private final MayorsOffice office;
     private State state = new State();
     private final Set<UUID> speaking = new HashSet<>();
     private int ticks;
@@ -143,6 +179,57 @@ public final class Elections {
         this.file = file;
         this.couriers = new Couriers(server, TownHall.MOD_ID + ":results");
         this.bars = new ElectionBars(server);
+        this.office = new MayorsOffice(server, this);
+    }
+
+    public MayorsOffice office() {
+        return office;
+    }
+
+    /** Colony key → its mayor; the office changes it too. */
+    Map<String, Mayor> mayors() {
+        return state.mayors;
+    }
+
+    /**
+     * Makes a citizen the mayor without an election, on {@code platform}. For the dev self-test, which
+     * cannot rely on who wins a real vote.
+     */
+    public Mayor appoint(IColony colony, ICitizenData data, String platform) {
+        Mayor mayor = new Mayor();
+        mayor.name = data.getName();
+        mayor.citizen = true;
+        mayor.id = data.getEntity().map(AbstractEntityCitizen::getUUID).orElse(new UUID(0, 0));
+        mayor.citizenId = data.getId();
+        mayor.sinceDay = colony.getDay();
+        mayor.result = data.getName() + " was appointed mayor.";
+        mayor.platform = platform;
+        Mayor previous = state.mayors.put(key(colony), mayor);
+        office.elected(colony, previous, mayor);
+        save();
+        return mayor;
+    }
+
+    /** Makes {@code player} the mayor without an election (testing); they already have the hat. */
+    public Mayor appoint(IColony colony, ServerPlayer player, String platform) {
+        Mayor mayor = new Mayor();
+        mayor.name = player.getGameProfile().getName();
+        mayor.id = player.getUUID();
+        mayor.sinceDay = colony.getDay();
+        mayor.result = mayor.name + " was appointed mayor.";
+        mayor.platform = platform;
+        mayor.hatDelivered = true;
+        Mayor previous = state.mayors.put(key(colony), mayor);
+        office.elected(colony, previous, mayor);
+        save();
+        return mayor;
+    }
+
+    /** The mayor is gone: no mayor, and a new election may be called right away. */
+    void vacate(String key) {
+        state.mayors.remove(key);
+        state.lastElectionAt.remove(key);
+        save();
     }
 
     private long now() {
@@ -164,8 +251,12 @@ public final class Elections {
     }
 
     @Nullable Mayor mayorById(int colonyId) {
-        return state.mayors.entrySet().stream().filter(entry -> entry.getKey().endsWith("|" + colonyId))
-                .map(Map.Entry::getValue).findFirst().orElse(null);
+        String key = mayorKeyById(colonyId);
+        return key == null ? null : state.mayors.get(key);
+    }
+
+    @Nullable String mayorKeyById(int colonyId) {
+        return state.mayors.keySet().stream().filter(key -> key.endsWith("|" + colonyId)).findFirst().orElse(null);
     }
 
     /** Whether {@code pos} is the colony's Town Hall block. */
@@ -351,9 +442,18 @@ public final class Elections {
         }
         Mayor mayor = mayor(colony);
         if (mayor != null) {
+            String key = key(colony);
             view.mayor = mayor.name;
             view.mayorSinceDay = mayor.sinceDay;
             view.mayorResult = mayor.result;
+            view.youAreMayor = !mayor.citizen && mayor.id.equals(player.getUUID());
+            view.promises = office.promiseLines(key, mayor);
+            if (mayor.proposal != null) {
+                view.proposal = mayor.proposal.status == Office.ProposalStatus.PENDING
+                        ? "The mayor proposes to " + mayor.proposal.what() + "." : OfficeText.proposalLine(mayor.proposal);
+                view.canAnswer = view.member && mayor.proposal.status == Office.ProposalStatus.PENDING;
+            }
+            for (Office.Proposal proposal : mayor.proposals) view.proposals.add(OfficeText.proposalLine(proposal));
         }
         return view;
     }
@@ -382,7 +482,10 @@ public final class Elections {
 
     void tick() {
         couriers.tick();
-        if (++ticks % CHECK_INTERVAL_TICKS != 0) return;
+        office.tick();
+        ++ticks;
+        if (!speeches.isEmpty()) trySpeeches();
+        if (ticks % CHECK_INTERVAL_TICKS != 0) return;
         for (Election election : List.copyOf(state.elections)) {
             IColony colony = colony(election.colonyKey);
             if (colony == null) {
@@ -391,6 +494,11 @@ public final class Elections {
                 continue;
             }
             if (!election.voting) {
+                // A rival stands while there is still time for their campaign, not once voting is due.
+                if (!election.rivalAsked && election.votingAt - now() <= RIVAL_CAMPAIGN_TICKS + 1_200
+                        && wantsRival(colony, election)) {
+                    election.rivalAsked = askRival(colony, election); // else again at the next check
+                }
                 if (now() >= election.votingAt) campaignEnds(colony, election);
                 else if (!election.reminded && election.votingAt - now() <= 1_200) {
                     election.reminded = true;
@@ -405,12 +513,19 @@ public final class Elections {
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             bringResults(player);
         }
+        takeOffHats();
+    }
+
+    /** A lone player candidate, or a sitting mayor, gets a citizen rival. */
+    private boolean wantsRival(IColony colony, Election election) {
+        long players = election.candidates.stream().filter(candidate -> !candidate.citizen).count();
+        boolean lone = players == 1 && election.candidates.size() == 1;
+        return (lone || incumbent(colony, election) != null) && election.candidates.size() < MAX_CANDIDATES;
     }
 
     private void campaignEnds(IColony colony, Election election) {
-        if (election.rivalWriting) return;
-        long players = election.candidates.stream().filter(candidate -> !candidate.citizen).count();
-        if (players == 1 && election.candidates.size() == 1 && !election.rivalAsked) {
+        if (election.rivalWriting || speechDue(election)) return;
+        if (!election.rivalAsked && wantsRival(colony, election)) {
             election.rivalAsked = true;
             if (askRival(colony, election)) return;
         }
@@ -422,17 +537,37 @@ public final class Elections {
                 + (election.candidates.size() == 1 ? " stands alone." : " stand."));
     }
 
-    /** The unhappiest grown citizen stands against a lone player. Returns whether they were asked. */
+    /** A sitting citizen mayor who is around and not on the ballot yet, or null. */
+    private @Nullable ICitizenData incumbent(IColony colony, Election election) {
+        Mayor mayor = state.mayors.get(election.colonyKey);
+        if (mayor == null || !mayor.citizen) return null;
+        ICitizenData data = MayorsOffice.citizen(colony, mayor);
+        if (data == null || data.isChild() || data.getEntity().isEmpty()) return null;
+        if (election.candidates.stream().anyMatch(candidate -> candidate.citizen && candidate.citizenId == data.getId())) return null;
+        return data;
+    }
+
+    /**
+     * A citizen stands: the sitting mayor for re-election, or else the unhappiest grown citizen against a
+     * lone player. Returns whether they were asked.
+     */
     private boolean askRival(IColony colony, Election election) {
         if (!TextCapacity.hasSpare()) return false;
-        ICitizenData rival = voters(colony, null).stream()
+        ICitizenData incumbent = incumbent(colony, election);
+        ICitizenData rival = incumbent != null ? incumbent : voters(colony, null).stream()
                 .min(Comparator.comparingDouble(data -> data.getCitizenHappinessHandler().getHappiness(colony, data)))
                 .orElse(null);
         AbstractEntityCitizen entity = rival == null ? null : rival.getEntity().orElse(null);
         if (entity == null) return false;
         election.rivalWriting = true;
         List<String> opponents = election.candidates.stream().map(candidate -> candidate.name).toList();
-        TextRequest request = TextRequest.of(TownHall.MOD_ID + ":rival", ElectionText.rivalDirective(colony.getName(), opponents))
+        String directive = ElectionText.rivalDirective(colony.getName(), opponents);
+        if (incumbent != null) {
+            String record = office.record(election.colonyKey, state.mayors.get(election.colonyKey));
+            directive += " You are the sitting mayor and stand for re-election, so defend what you did in office"
+                    + (record.isBlank() ? "." : ": " + record);
+        }
+        TextRequest request = TextRequest.of(TownHall.MOD_ID + ":rival", directive)
                 .withMaxChars(600).withResponseSchema(ElectionText.rivalSchema());
         CitizenTextService.generate(entity, request).whenComplete((result, error) -> server.execute(() -> {
             election.rivalWriting = false;
@@ -451,14 +586,151 @@ public final class Elections {
             candidate.slogan = campaign.slogan();
             candidate.platform = campaign.platform();
             election.candidates.add(candidate);
-            election.votingAt = now() + RIVAL_CAMPAIGN_TICKS;
+            election.votingAt = Math.max(election.votingAt, now() + RIVAL_CAMPAIGN_TICKS);
             announce(colony, candidate, entity.blockPosition(), ElectionText.candidacy(candidate.name, candidate.slogan, candidate.platform));
             save();
+            campaignSpeech(colony, election, candidate, entity, opponents, incumbent != null);
             tellMembers(colony, candidate.name + " stands for mayor against " + ElectionText.join(opponents)
                     + ": \"" + candidate.slogan + "\". Voting starts in about "
-                    + RIVAL_CAMPAIGN_TICKS / 1_200 + " minutes.");
+                    + Math.max(1, (election.votingAt - now() + 600) / 1_200) + " minutes.");
         }));
         return true;
+    }
+
+    /**
+     * A citizen candidate makes their case aloud, as players do: they walk up to a player standing
+     * against them (else the nearest colony member) with their campaign pamphlet and give the speech,
+     * or give it where they stand when nobody can be reached. A candidate who is busy (at the campfire,
+     * in a conversation) does it once they are free; the vote waits for it a while. The colony hears
+     * what was said.
+     */
+    private void campaignSpeech(IColony colony, Election election, Candidate candidate, AbstractEntityCitizen speaker,
+                                List<String> opponents, boolean incumbent) {
+        speeches.add(new PendingSpeech(colony, election, candidate, speaker, opponents, incumbent, ticks));
+    }
+
+    /** Moves waiting campaign speeches along: walk over when free, then speak once nobody nearby is talking. */
+    private void trySpeeches() {
+        for (PendingSpeech speech : List.copyOf(speeches)) {
+            if (speech.busy || ticks < speech.nextTry) continue;
+            if (!state.elections.contains(speech.election) || !speech.speaker.isAlive() || speech.speaker.isRemoved()
+                    || ticks - speech.since > SPEECH_WAIT_TICKS) {
+                if (ticks - speech.since > SPEECH_WAIT_TICKS) {
+                    TownHall.LOGGER.info("{} found no moment for a campaign speech", speech.candidate.name);
+                }
+                speeches.remove(speech);
+                continue;
+            }
+            speech.nextTry = ticks + SPEECH_RETRY_TICKS;
+            if (!speech.walked) walk(speech);
+            else speak(speech);
+        }
+    }
+
+    /** Walks over with the pamphlet; while the candidate cannot go (busy, reserved) it is tried again. */
+    private void walk(PendingSpeech speech) {
+        ServerPlayer listener = listener(speech.colony, speech.election, speech.speaker);
+        if (listener == null || ticks - speech.since > SPEECH_WALK_TICKS) {
+            speech.walked = true; // nobody to walk to, or no chance to: speak where they stand
+            return;
+        }
+        Candidate candidate = speech.candidate;
+        speech.busy = couriers.bring("speech|" + speech.election.id + "|" + candidate.citizenId, speech.speaker, listener,
+                "a campaign pamphlet",
+                () -> WrittenBooks.create("Vote " + candidate.name.split(" ")[0], candidate.name, WrittenBooks.ORIGINAL,
+                        BookPages.paginate(ElectionText.pamphlet(candidate.name, candidate.slogan, candidate.platform), BookPages.PAGE_CHARS)
+                                .stream().map(page -> (Component) Component.literal(page)).toList()),
+                delivered -> {
+                    speech.busy = false;
+                    speech.walked = true;
+                    speech.nextTry = ticks;
+                    if (delivered) speech.listener = listener.getGameProfile().getName();
+                });
+    }
+
+    private void speak(PendingSpeech speech) {
+        if (speech.election.voting) {
+            speeches.remove(speech);
+            return;
+        }
+        speech.busy = true;
+        String directive = ElectionText.rivalSpeech(speech.colony.getName(), speech.candidate.slogan, speech.candidate.platform,
+                speech.opponents, speech.incumbent, speech.listener);
+        CitizenConversationService.requestAmbientLine(speech.speaker, directive).whenComplete((result, error) -> server.execute(() -> {
+            speech.busy = false;
+            if (error == null && result.status() == AmbientLineResult.Status.REJECTED && retryable(result.rejectionReason())) {
+                return; // someone nearby is talking, or the candidate is busy: try again in a moment
+            }
+            speeches.remove(speech);
+            if (error != null || !result.completed() || result.transcript().isBlank()) {
+                TownHall.LOGGER.info("{}'s campaign speech was not given: {}", speech.candidate.name,
+                        error != null ? error.toString() : result.status() + " " + result.detail());
+                return;
+            }
+            if (!state.elections.contains(speech.election)) return;
+            String said = ElectionText.withoutSpeaker(speech.candidate.name, result.transcript());
+            announce(speech.colony, speech.candidate, speech.speaker.blockPosition(), ElectionText.speech(speech.candidate.name, said));
+            speech.candidate.platform = ElectionText.cut(speech.candidate.platform + " Speech: " + said, ElectionText.MAX_PLATFORM_CHARS);
+            save();
+            TownHall.LOGGER.info("{} gave a campaign speech: {}", speech.candidate.name, said);
+        }));
+    }
+
+    /** Whether a citizen candidate of the election still owes their speech; voting waits for it a while. */
+    private boolean speechDue(Election election) {
+        return speeches.stream().anyMatch(speech -> speech.election == election);
+    }
+
+    private static boolean retryable(@Nullable AmbientLineResult.RejectionReason reason) {
+        return reason == AmbientLineResult.RejectionReason.BUSY || reason == AmbientLineResult.RejectionReason.COOLDOWN
+                || reason == AmbientLineResult.RejectionReason.CAPACITY_EXHAUSTED || reason == AmbientLineResult.RejectionReason.BUDGET_EXCEEDED;
+    }
+
+    /** A citizen candidate's campaign speech on its way: walking over, then waiting for a quiet moment. */
+    private static final class PendingSpeech {
+        final IColony colony;
+        final Election election;
+        final Candidate candidate;
+        final AbstractEntityCitizen speaker;
+        final List<String> opponents;
+        final boolean incumbent;
+        final int since;
+        boolean walked;
+        boolean busy;
+        int nextTry;
+        @Nullable String listener;
+
+        PendingSpeech(IColony colony, Election election, Candidate candidate, AbstractEntityCitizen speaker,
+                      List<String> opponents, boolean incumbent, int since) {
+            this.colony = colony;
+            this.election = election;
+            this.candidate = candidate;
+            this.speaker = speaker;
+            this.opponents = opponents;
+            this.incumbent = incumbent;
+            this.since = since;
+        }
+    }
+
+    /** Who a citizen candidate makes their speech to: an opposing player candidate nearby, else the nearest member. */
+    private @Nullable ServerPlayer listener(IColony colony, Election election, AbstractEntityCitizen speaker) {
+        ServerPlayer best = null;
+        double bestScore = Double.MAX_VALUE;
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (player.level() != speaker.level() || player.isSpectator() || !colony.getPermissions().isColonyMember(player)
+                    || CitizenConversationService.isPlayerInConversation(player)) {
+                continue;
+            }
+            double distance = player.distanceToSqr(speaker);
+            if (distance > Couriers.MAX_RANGE * Couriers.MAX_RANGE) continue;
+            boolean opponent = election.candidates.stream().anyMatch(candidate -> !candidate.citizen && candidate.id.equals(player.getUUID()));
+            double score = opponent ? distance : distance + Couriers.MAX_RANGE * Couriers.MAX_RANGE;
+            if (score < bestScore) {
+                bestScore = score;
+                best = player;
+            }
+        }
+        return best;
     }
 
     private void collectVotes(IColony colony, Election election) {
@@ -470,11 +742,76 @@ public final class Elections {
             finish(colony, election);
             return;
         }
+        // A large colony would wait long for one request per voter: past the first few, they vote in batches.
+        int individual = Math.max(0, INDIVIDUAL_VOTERS - election.votes.size() - election.inFlight.size());
+        List<ICitizenData> batch = new ArrayList<>();
         for (ICitizenData voter : waiting) {
-            if (election.inFlight.size() >= MAX_VOTES_IN_FLIGHT || !TextCapacity.hasSpare()) return;
             if (election.inFlight.contains(voter.getId())) continue;
-            castVote(colony, election, voter);
+            if (individual > 0) {
+                if (election.inFlight.size() >= MAX_VOTES_IN_FLIGHT || !TextCapacity.hasSpare()) return;
+                castVote(colony, election, voter);
+                individual--;
+            } else if (batch.size() < BATCH_VOTERS) {
+                batch.add(voter);
+            }
         }
+        if (!batch.isEmpty() && !election.batchInFlight && TextCapacity.hasSpare()) castVotes(colony, election, batch);
+    }
+
+    /** Several voters decide at once, in the colony's voice rather than each citizen's. */
+    private void castVotes(IColony colony, Election election, List<ICitizenData> voters) {
+        List<String> names = election.candidates.stream().map(candidate -> candidate.name).toList();
+        List<ElectionText.CandidateBrief> candidates = new ArrayList<>();
+        for (Candidate candidate : election.candidates) {
+            candidates.add(new ElectionText.CandidateBrief(candidate.name, candidate.platform, null, record(election.colonyKey, candidate)));
+        }
+        List<ElectionText.VoterBrief> briefs = new ArrayList<>();
+        for (ICitizenData voter : voters) {
+            CitizenMemorySnapshot memory = CitizenMemoryService.snapshot(voter).orElse(null);
+            List<String> heard = new ArrayList<>();
+            List<String> feelings = new ArrayList<>();
+            for (Candidate candidate : election.candidates) {
+                if (heardPlatform(memory, candidate) != null) heard.add(candidate.name);
+                String about = ElectionText.feelings(feelings(memory, candidate.id));
+                if (about != null) feelings.add("About " + candidate.name + ": " + about);
+            }
+            briefs.add(new ElectionText.VoterBrief(voter.getName(), voterAbout(voter), heard,
+                    feelings.isEmpty() ? null : String.join(" ", feelings)));
+            election.inFlight.add(voter.getId());
+            election.attempts.merge(voter.getId(), 1, Integer::sum);
+        }
+        List<String> voterNames = voters.stream().map(ICitizenData::getName).toList();
+        election.batchInFlight = true;
+        TextRequest request = TextRequest.of(TownHall.MOD_ID + ":votes", ElectionText.batchVoteDirective(candidates, briefs))
+                .withMaxChars(250 * voters.size()).withResponseSchema(ElectionText.batchVoteSchema(voterNames, names));
+        CitizenTextService.generateColonyVoice(colony, request).whenComplete((result, error) -> server.execute(() -> {
+            election.batchInFlight = false;
+            voters.forEach(voter -> election.inFlight.remove(voter.getId()));
+            if (!state.elections.contains(election)) return;
+            Map<String, ElectionText.Vote> votes = error == null && result.isSuccess()
+                    ? ElectionText.parseBatchVotes(result.json(), voterNames, names) : Map.of();
+            if (votes.isEmpty()) {
+                TownHall.LOGGER.warn("A batch of {} votes failed: {}", voters.size(),
+                        error != null ? error.toString() : result.status() + " " + result.detail());
+                return;
+            }
+            for (ICitizenData voter : voters) {
+                ElectionText.Vote vote = votes.get(voter.getName());
+                if (vote == null) continue;
+                election.votes.put(voter.getId(), vote);
+                election.voterNames.put(voter.getId(), voterLabel(voter));
+                remember(voter, election, vote, names);
+            }
+            save();
+            TownHall.LOGGER.info("{} of {} citizens voted in one batch", votes.size(), voters.size());
+        }));
+    }
+
+    /** "farmer, happiness 6/10" for a batch vote. */
+    private static String voterAbout(ICitizenData data) {
+        String label = voterLabel(data);
+        String job = label.equals(data.getName()) ? "no job" : label.substring(data.getName().length() + 2);
+        return job + ", happiness " + Math.round(data.getCitizenHappinessHandler().getHappiness(data.getColony(), data)) + "/10";
     }
 
     private void castVote(IColony colony, Election election, ICitizenData voter) {
@@ -485,7 +822,7 @@ public final class Elections {
         List<ElectionText.CandidateBrief> briefs = new ArrayList<>();
         for (Candidate candidate : election.candidates) {
             briefs.add(new ElectionText.CandidateBrief(candidate.name, heardPlatform(memory, candidate),
-                    ElectionText.feelings(feelings(memory, candidate.id))));
+                    ElectionText.feelings(feelings(memory, candidate.id)), record(election.colonyKey, candidate)));
         }
         election.inFlight.add(voter.getId());
         election.attempts.merge(voter.getId(), 1, Integer::sum);
@@ -504,7 +841,45 @@ public final class Elections {
             election.voterNames.put(voter.getId(), voterLabel(voter));
             save();
             remember(voter, election, vote, names);
+            TownHall.LOGGER.info("{} voted ({} of the votes are in)", voter.getName(), election.votes.size());
         }));
+    }
+
+    /** Whether {@code playerId} is the sitting mayor of any colony. */
+    boolean isPlayerMayor(UUID playerId) {
+        return state.mayors.values().stream().anyMatch(mayor -> !mayor.citizen && mayor.id.equals(playerId));
+    }
+
+    /** The mayor's hat is for the sitting mayor: anyone else who wears it puts it back in their bag. */
+    private void takeOffHats() {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            ItemStack head = player.getItemBySlot(EquipmentSlot.HEAD);
+            if (!head.is(TownHallBlocks.MAYOR_HAT.get()) || isPlayerMayor(player.getUUID())) continue;
+            player.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
+            if (!player.getInventory().add(head)) player.drop(head, false);
+            player.displayClientMessage(Component.literal("Only the mayor wears the mayor's hat.").withStyle(ChatFormatting.GRAY), true);
+        }
+    }
+
+    /**
+     * What a candidate did that voters know about: the sitting mayor's promises and proposals, or how a
+     * player answered a citizen mayor's proposals. Null when there is nothing.
+     */
+    private @Nullable String record(String key, Candidate candidate) {
+        Mayor mayor = state.mayors.get(key);
+        if (mayor == null) return null;
+        if (mayor.id.equals(candidate.id)) {
+            String record = office.record(key, mayor);
+            return record.isBlank() ? "the sitting mayor since day " + mayor.sinceDay + "." : "the sitting mayor since day "
+                    + mayor.sinceDay + ". " + record;
+        }
+        if (!mayor.citizen || candidate.citizen) return null;
+        List<Office.Proposal> answered = new ArrayList<>();
+        for (Office.Proposal proposal : mayor.proposals) {
+            if (candidate.id.equals(proposal.playerId)) answered.add(proposal);
+        }
+        if (mayor.proposal != null && candidate.id.equals(mayor.proposal.playerId)) answered.add(mayor.proposal);
+        return OfficeText.playerRecord(candidate.name, answered);
     }
 
     /** What the voter heard of the candidate's campaign, or null if nothing reached them. */
@@ -562,9 +937,12 @@ public final class Elections {
             mayor.name = winner.name;
             mayor.citizen = winner.citizen;
             mayor.id = winner.id;
+            mayor.citizenId = winner.citizen ? winner.citizenId : -1;
             mayor.sinceDay = colony.getDay();
             mayor.result = result;
-            state.mayors.put(election.colonyKey, mayor);
+            mayor.platform = winner.platform;
+            Mayor previous = state.mayors.put(election.colonyKey, mayor);
+            office.elected(colony, previous, mayor);
         }
         save();
 
@@ -679,7 +1057,7 @@ public final class Elections {
                 .append(Component.literal(text).withStyle(ChatFormatting.GRAY)));
     }
 
-    private static @Nullable IColony colony(String key) {
+    static @Nullable IColony colony(String key) {
         for (IColony colony : IColonyManager.getInstance().getAllColonies()) {
             if (key(colony).equals(key)) return colony;
         }
@@ -692,6 +1070,8 @@ public final class Elections {
 
     void stopAll() {
         couriers.stopAll();
+        speeches.clear();
+        office.stopAll();
         bars.clear();
     }
 

@@ -18,6 +18,10 @@ public class BallotBoxBlockEntity extends BlockEntity {
     public static final String VIEW = "ballot_view";
     public static final String STAND = "ballot_stand";
     public static final String SPEAK = "ballot_speak";
+    /** Answers the mayor's proposal: agree. */
+    public static final String ACCEPT = "ballot_accept";
+    /** Answers the mayor's proposal: turn it down. */
+    public static final String REFUSE = "ballot_refuse";
     /** The kind of view the server sends back. */
     public static final String VIEW_KIND = "ballot";
 

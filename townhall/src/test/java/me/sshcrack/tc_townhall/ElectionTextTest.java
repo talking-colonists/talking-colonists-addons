@@ -1,5 +1,6 @@
 package me.sshcrack.tc_townhall;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import org.junit.jupiter.api.Test;
 
@@ -85,5 +86,53 @@ class ElectionTextTest {
     void suggestionNotesAreShort() {
         assertEquals("We need a bakery.", SuggestionText.clean(" \"We need a bakery.\" "));
         assertTrue(SuggestionText.clean("word ".repeat(100)).length() <= SuggestionText.MAX_NOTE_CHARS);
+    }
+
+    @Test
+    void aCitizenCandidateGivesTheirSpeechAloud() {
+        String toSteve = ElectionText.rivalSpeech("Oakvale", "Homes first ", "More   houses.", List.of("Steve"), false, "Steve");
+        assertTrue(toSteve.startsWith("You stand for mayor of Oakvale against Steve. Your slogan: \"Homes first\". Your platform: More houses."));
+        assertTrue(toSteve.contains("You just handed Steve your campaign pamphlet."));
+        assertTrue(toSteve.contains("aloud to Steve and everyone around you"));
+        assertTrue(toSteve.contains("never insult your opponents"));
+        String incumbent = ElectionText.rivalSpeech("Oakvale", "Steady hands", "Keep going.", List.of("Steve", "Alex"), true, null);
+        assertTrue(incumbent.contains("as the sitting mayor seeking re-election"));
+        assertTrue(incumbent.contains("stand by what you did in office"));
+        assertTrue(incumbent.contains("aloud to everyone around you"));
+        assertEquals("Jobs first.", ElectionText.withoutSpeaker("Dalton E. Clerk", "Dalton E. Clerk: Jobs first. "));
+        assertEquals("Jobs first.", ElectionText.withoutSpeaker("Dalton E. Clerk", "Jobs first."));
+        assertEquals("\"Homes first\"\n\nMore houses.\n\nVote Remy for mayor!", ElectionText.pamphlet("Remy", "Homes first", "More houses."));
+    }
+
+    @Test
+    void manyVotersVoteInOneBatch() {
+        List<String> names = List.of("Dev", "Louisa X. Cripps");
+        List<String> voters = List.of("Riley L. Groston", "Heath H. Altena", "Lacey C. Clark");
+        String directive = ElectionText.batchVoteDirective(
+                List.of(new ElectionText.CandidateBrief("Dev", "Walls before winter.", null),
+                        new ElectionText.CandidateBrief("Louisa X. Cripps", "A school for every child.", null)),
+                List.of(new ElectionText.VoterBrief("Riley L. Groston", "pupil, happiness 7/10", List.of("Louisa X. Cripps"), null),
+                        new ElectionText.VoterBrief("Heath H. Altena", "no job, happiness 4/10", List.of(), "About Dev: trusts them.")));
+        assertTrue(directive.contains("Heard the campaign of Louisa X. Cripps."));
+        assertTrue(directive.contains("Heard no campaign. About Dev: trusts them."));
+        assertTrue(directive.length() < 4_000);
+
+        JsonObject answer = new JsonObject();
+        JsonArray votes = new JsonArray();
+        JsonObject first = vote("louisa x. cripps", "She cares about school.");
+        first.addProperty("voter", "Riley L. Groston");
+        votes.add(first);
+        JsonObject stranger = vote("Dev", "x");
+        stranger.addProperty("voter", "Nobody");
+        votes.add(stranger);
+        JsonObject second = vote("Dev", "Walls matter.");
+        second.addProperty("voter", "heath h. altena");
+        votes.add(second);
+        answer.add("votes", votes);
+        var parsed = ElectionText.parseBatchVotes(answer, voters, names);
+        assertEquals(2, parsed.size());
+        assertEquals(new ElectionText.Vote(1, "She cares about school."), parsed.get("Riley L. Groston"));
+        assertEquals(0, parsed.get("Heath H. Altena").candidate());
+        assertNotNull(ElectionText.batchVoteSchema(voters, names).getAsJsonObject("properties").get("votes"));
     }
 }

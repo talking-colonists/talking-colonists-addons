@@ -6,7 +6,9 @@ import com.google.gson.JsonObject;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Pure text for elections: what citizens hear, what voters and rivals are asked, and the results. */
 public final class ElectionText {
@@ -20,8 +22,15 @@ public final class ElectionText {
     /** How citizens refer to where the news comes from. */
     public static final String SOURCE_NAME = "the town hall";
 
-    /** A candidate as one voter knows them. {@code heardPlatform} is null when the voter never heard it. */
-    public record CandidateBrief(String name, @Nullable String heardPlatform, @Nullable String feelings) {
+    /**
+     * A candidate as one voter knows them. {@code heardPlatform} is null when the voter never heard it;
+     * {@code record} is what they did in office or as a player the mayor asked, or null.
+     */
+    public record CandidateBrief(String name, @Nullable String heardPlatform, @Nullable String feelings,
+                                 @Nullable String record) {
+        public CandidateBrief(String name, @Nullable String heardPlatform, @Nullable String feelings) {
+            this(name, heardPlatform, feelings, null);
+        }
     }
 
     /** A citizen's campaign, as they wrote it. */
@@ -78,6 +87,34 @@ public final class ElectionText {
                 + "change for the colony, grounded in the real problems and wishes you know about. Plain text only.";
     }
 
+    /**
+     * What a citizen candidate is asked to say aloud as their campaign speech. {@code listener} is the
+     * player they walked up to, or null when they speak where they stand.
+     */
+    public static String rivalSpeech(String colonyName, String slogan, String platform, List<String> opponents,
+                                     boolean incumbent, @Nullable String listener) {
+        String who = listener == null ? "everyone around you" : listener + " and everyone around you";
+        return "You stand for mayor of " + colonyName + " against " + join(opponents) + (incumbent
+                ? ", as the sitting mayor seeking re-election." : ".")
+                + " Your slogan: \"" + slogan.strip() + "\". Your platform: " + platform.strip().replaceAll("\\s+", " ")
+                + (listener == null ? "" : " You just handed " + listener + " your campaign pamphlet.")
+                + "\nNow give your campaign speech aloud to " + who + ": 3 to 5 sentences in your own voice and manner. "
+                + "Say why you stand and what you will do, "
+                + (incumbent ? "stand by what you did in office, " : "")
+                + "and ask for their vote. Be persuasive but fair: never insult your opponents.";
+    }
+
+    /** A spoken line without the "Name: " the transcript may start with. */
+    public static String withoutSpeaker(String name, String transcript) {
+        String text = transcript.strip();
+        return text.startsWith(name + ":") ? text.substring(name.length() + 1).strip() : text;
+    }
+
+    /** The campaign pamphlet a citizen candidate hands over: slogan, platform and name. */
+    public static String pamphlet(String name, String slogan, String platform) {
+        return "\"" + slogan.strip() + "\"\n\n" + platform.strip() + "\n\nVote " + name + " for mayor!";
+    }
+
     public static JsonObject rivalSchema() {
         JsonObject properties = new JsonObject();
         properties.add("slogan", string("Your campaign slogan, at most 8 words"));
@@ -103,10 +140,11 @@ public final class ElectionText {
                     ? "you never heard what they stand for."
                     : "you heard this: " + cut(candidate.heardPlatform().strip(), MAX_BROADCAST_CHARS));
             if (candidate.feelings() != null) text.append(" About them: ").append(candidate.feelings());
+            if (candidate.record() != null) text.append(" Their record: ").append(candidate.record());
             text.append('\n');
         }
         text.append("\nVote for the candidate you honestly prefer, as yourself: think of your own needs and worries, ")
-                .append("what you heard them promise, and how you feel about them. You may abstain if none of them ")
+                .append("what you heard them promise, what they actually did, and how you feel about them. You may abstain if none of them ")
                 .append("deserves your vote. Give your reason in one sentence of at most 150 characters, in your own ")
                 .append("voice, as you would tell a neighbour.");
         return text.toString();
@@ -122,6 +160,69 @@ public final class ElectionText {
         properties.add("vote", vote);
         properties.add("reason", string("Why, in one sentence"));
         return object(properties, "vote", "reason");
+    }
+
+    /**
+     * A voter decided together with others in one request (large colonies): who they are, whose
+     * campaign reached them, and how they feel about the candidates, all in a line or two.
+     */
+    public record VoterBrief(String name, String about, List<String> heard, @Nullable String feelings) {
+    }
+
+    /**
+     * Several citizens vote at once, each as themselves. {@code candidates} carry their full platform as
+     * {@link CandidateBrief#heardPlatform()}; a voter only knows the platforms in their {@code heard}.
+     */
+    public static String batchVoteDirective(List<CandidateBrief> candidates, List<VoterBrief> voters) {
+        StringBuilder text = new StringBuilder("Today the colony elects its mayor. Decide how each citizen below votes, "
+                + "each one as themselves. The candidates:\n");
+        for (CandidateBrief candidate : candidates) {
+            text.append("- ").append(candidate.name()).append(": ")
+                    .append(candidate.heardPlatform() == null ? "(no platform)" : cut(candidate.heardPlatform().strip(), 300));
+            if (candidate.record() != null) text.append(" Their record: ").append(cut(candidate.record(), 200));
+            text.append('\n');
+        }
+        text.append("\nThe voters:\n");
+        for (VoterBrief voter : voters) {
+            text.append("- ").append(voter.name()).append(" (").append(voter.about()).append("). ")
+                    .append(voter.heard().isEmpty() ? "Heard no campaign." : "Heard the campaign of " + String.join(" and ", voter.heard()) + ".");
+            if (voter.feelings() != null) text.append(' ').append(voter.feelings());
+            text.append('\n');
+        }
+        text.append("\nA citizen only knows the platforms they heard; one who heard none goes by their feelings and needs. "
+                + "Each may abstain. Give each reason in one sentence of at most 150 characters, in their own voice.");
+        return text.toString();
+    }
+
+    public static JsonObject batchVoteSchema(List<String> voters, List<String> names) {
+        JsonObject voter = string("The voter's name");
+        JsonArray voterNames = new JsonArray();
+        voters.forEach(voterNames::add);
+        voter.add("enum", voterNames);
+        JsonObject one = voteSchema(names);
+        one.getAsJsonObject("properties").add("voter", voter);
+        one.getAsJsonArray("required").add("voter");
+        JsonObject list = new JsonObject();
+        list.addProperty("type", "array");
+        list.add("items", one);
+        JsonObject properties = new JsonObject();
+        properties.add("votes", list);
+        return object(properties, "votes");
+    }
+
+    /** Voter name → vote, for the votes in the answer that name a voter and someone on the ballot. */
+    public static Map<String, Vote> parseBatchVotes(@Nullable JsonObject json, List<String> voters, List<String> names) {
+        Map<String, Vote> votes = new HashMap<>();
+        if (json == null || !json.has("votes") || !json.get("votes").isJsonArray()) return votes;
+        for (JsonElement element : json.getAsJsonArray("votes")) {
+            if (!element.isJsonObject()) continue;
+            String voter = text(element.getAsJsonObject().get("voter"));
+            Vote vote = parseVote(element.getAsJsonObject(), names);
+            if (voter == null || vote == null) continue;
+            voters.stream().filter(name -> name.equalsIgnoreCase(voter.strip())).findFirst()
+                    .ifPresent(name -> votes.putIfAbsent(name, vote));
+        }
+        return votes;
     }
 
     /** The vote in the answer; null when it names nobody on the ballot. */
@@ -222,7 +323,8 @@ public final class ElectionText {
     /** Told to a citizen who is the mayor. */
     public static String mayorInstruction(int sinceDay) {
         return "You are the colony's elected mayor since day " + sinceDay + ". You take the office seriously and "
-                + "talk about the colony's future and your plans like a mayor would, without boasting.";
+                + "talk about the colony's future and your plans like a mayor would, without boasting. You wear the "
+                + "mayor's hat, a black top hat with a gold band.";
     }
 
     static String join(List<String> names) {

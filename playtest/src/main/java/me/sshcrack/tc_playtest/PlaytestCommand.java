@@ -2,6 +2,7 @@ package me.sshcrack.tc_playtest;
 
 import com.minecolonies.api.colony.ICitizenData;
 import com.minecolonies.api.colony.IColony;
+import com.minecolonies.api.colony.buildings.IBuilding;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -10,11 +11,15 @@ import me.sshcrack.mc_talking.api.colony.ColonyEventService;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import me.sshcrack.tc_playtest.shared.book.WrittenBooks;
 
 import java.util.List;
@@ -37,7 +42,8 @@ final class PlaytestCommand {
                 .then(Commands.literal("letter").executes(PlaytestCommand::letter))
                 .then(Commands.literal("visitor").executes(PlaytestCommand::visitor))
                 .then(Commands.literal("notice").executes(PlaytestCommand::notice))
-                .then(Commands.literal("townhall").executes(PlaytestCommand::townHall)));
+                .then(Commands.literal("townhall").executes(PlaytestCommand::townHall))
+                .then(Commands.literal("stand").executes(PlaytestCommand::stand)));
     }
 
     private static int home(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
@@ -121,9 +127,7 @@ final class PlaytestCommand {
     /** A campaign book to stand for mayor with, a Ballot Box and a Suggestion Box. */
     private static int townHall(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
-        ItemStack campaign = WrittenBooks.create("Walls before winter", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
-                List.of(Component.literal("I will build a wall around the colony before winter, hire two guards, and open "
-                        + "a bakery so nobody goes hungry.")));
+        ItemStack campaign = campaignBook(player);
         for (ItemStack stack : List.of(campaign, addonItem("tc_townhall:ballot_box"), addonItem("tc_townhall:suggestion_box"))) {
             if (stack.isEmpty()) continue;
             if (!player.getInventory().add(stack)) player.drop(stack, false);
@@ -132,6 +136,29 @@ final class PlaytestCommand {
                 + "there (or right-click the Town Hall block holding \"Walls before winter\"), then speak for up to 30 s. "
                 + "Place the Suggestion Box anywhere in the colony and right-click it to read the notes."), false);
         return 1;
+    }
+
+    /** For scripted scenarios: stand for mayor as a player would, by using the campaign book on the Town Hall block. */
+    private static int stand(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        IColony colony = colony(player);
+        if (colony == null) return 0;
+        IBuilding townHall = colony.getServerBuildingManager().getTownHall();
+        if (townHall == null) {
+            context.getSource().sendFailure(Component.literal("[Playtest] The colony has no town hall."));
+            return 0;
+        }
+        BlockPos pos = townHall.getPosition();
+        player.setItemInHand(InteractionHand.MAIN_HAND, campaignBook(player));
+        player.gameMode.useItemOn(player, player.serverLevel(), player.getMainHandItem(), InteractionHand.MAIN_HAND,
+                new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
+        return 1;
+    }
+
+    private static ItemStack campaignBook(ServerPlayer player) {
+        return WrittenBooks.create("Walls before winter", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
+                List.of(Component.literal("I will build a wall around the colony before winter, hire two guards, and open "
+                        + "a bakery so nobody goes hungry.")));
     }
 
     private static ItemStack addonItem(String id) {

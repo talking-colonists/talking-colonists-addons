@@ -2,12 +2,17 @@ package me.sshcrack.tc_townhall;
 
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.IColonyManager;
+import me.sshcrack.mc_talking.api.conversation.ConversationUtteranceEvent;
+import me.sshcrack.mc_talking.api.conversation.ConversationKind;
+import me.sshcrack.mc_talking.api.conversation.CitizenConversationService;
+import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import me.sshcrack.mc_talking.api.ApiFeature;
 import me.sshcrack.mc_talking.api.TalkingColonistsApi;
 import me.sshcrack.tc_townhall.shared.guide.Guides;
 import me.sshcrack.mc_talking.api.prompt.CitizenPromptService;
 import me.sshcrack.mc_talking.api.prompt.PromptContribution;
 import me.sshcrack.mc_talking.api.prompt.PromptTarget;
+import me.sshcrack.mc_talking.api.tool.AiToolRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.MinecraftServer;
@@ -30,6 +35,11 @@ import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 *//*?}*/
+/*? if neoforge {*/
+import me.sshcrack.tc_townhall.client.TownHallClient;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
+/*?}*/
 /*? if neoforge {*/
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -83,6 +93,9 @@ public class TownHall {
         // The blocks always register, so worlds that contain them load even when the addon stays inactive.
         TownHallBlocks.register(modBus);
         /*? if neoforge {*/
+        if (FMLEnvironment.dist == Dist.CLIENT) TownHallClient.init(modBus);
+        /*?}*/
+        /*? if neoforge {*/
         BlockActions.init(MOD_ID, modBus);
         /*?}*/
         /*? if forge {*/
@@ -94,6 +107,8 @@ public class TownHall {
         });
         BlockActions.on(BallotBoxBlockEntity.VIEW, (player, pos, argument, text) -> sendBallot(player, pos));
         BlockActions.on(BallotBoxBlockEntity.STAND, TownHall::standAtBallotBox);
+        BlockActions.on(BallotBoxBlockEntity.ACCEPT, (player, pos, argument, text) -> answerAtBallotBox(player, pos, true));
+        BlockActions.on(BallotBoxBlockEntity.REFUSE, (player, pos, argument, text) -> answerAtBallotBox(player, pos, false));
         BlockActions.on(BallotBoxBlockEntity.SPEAK, (player, pos, argument, text) -> {
             IColony colony = colonyAt(player, pos);
             if (colony != null && elections != null) elections.speakAgain(player, colony, pos);
@@ -104,6 +119,10 @@ public class TownHall {
             return;
         }
         registerGuide();
+        AiToolRegistry.register(MOD_ID, MayorsOffice.TOOL, new AnswerProposalTool());
+        if (TalkingColonistsApi.supports(ApiFeature.UTTERANCE_EVENTS)) {
+            CitizenConversationService.registerUtteranceListener(MOD_ID + ":proposal_presented", 0, TownHall::heardMayor);
+        }
         CitizenPromptService.registerContributor(MOD_ID + ":politics", 100, context -> {
             Elections running = elections;
             if (running == null || context.view().visitor() != null) return List.of();
@@ -112,7 +131,7 @@ public class TownHall {
                     && target != PromptTarget.CONVERSATIONAL_INFO) {
                 return List.of();
             }
-            return politics(running, context.view().colony().id(), context.view().citizenId());
+            return politics(running, context.view().colony().id(), context.view().citizenId(), context.view().playerId());
         });
 
         /*? if forge {*/
@@ -145,6 +164,29 @@ public class TownHall {
         bus.addListener((RegisterCommandsEvent event) -> TownHallCommands.register(event.getDispatcher()));
     }
 
+    /** Whether {@code player} may wear the mayor's hat: only while they are a sitting mayor. */
+    public static boolean mayWearHat(ServerPlayer player) {
+        Elections running = elections;
+        return running == null || running.isPlayerMayor(player.getUUID());
+    }
+
+    /** The citizen mayor said something to a player: from then on, the player's answer to the proposal counts. */
+    private static void heardMayor(ConversationUtteranceEvent event) {
+        AbstractEntityCitizen citizen = event.citizen();
+        if (event.speaker() != ConversationUtteranceEvent.Speaker.CITIZEN || event.kind() != ConversationKind.PLAYER
+                || citizen == null || citizen.getCitizenData() == null || citizen.level().getServer() == null) {
+            return;
+        }
+        citizen.level().getServer().execute(() -> {
+            Elections running = elections;
+            IColony colony = citizen.getCitizenData().getColony();
+            Elections.Mayor mayor = running == null ? null : running.mayor(colony);
+            if (mayor != null && mayor.citizen && mayor.id.equals(citizen.getUUID()) && mayor.proposal != null) {
+                mayor.proposal.presented = true;
+            }
+        });
+    }
+
     private static void registerGuide() {
         Guides.register(MOD_ID + ":guide", "Town Hall and Elections",
                 "Stand for mayor with a speech, and every citizen votes on what reached them. A Suggestion Box collects citizens' notes about what worries them.",
@@ -153,19 +195,24 @@ public class TownHall {
                         "Right-click it, type a slogan and what you will do, and stand for mayor.",
                         "With voice chat, you then have 30 seconds for a speech to the citizens nearby.",
                         "The campaign lasts a day. Then the citizens vote; the box shows a live tally, and a citizen brings you the results.",
+                        "The winner wears the Mayor's Hat. A citizen mayor brings you a report once a day, with what the colony lacks and a proposal: say yes or no, or answer at the Ballot Box.",
                         "Craft a Suggestion Box (paper over a chest over a log): each morning unhappy citizens drop notes in it."),
                 List.of(
                         "Right-clicking the Town Hall block with a signed book also works: the title is your slogan, the text your platform.",
-                        "If you are the only candidate, the unhappiest citizen stands against you, so you can lose.",
-                        "A new election can be called three days after the last one.",
-                        "Operators: /townhall rush ends campaigns now, /townhall notes has citizens write notes now."));
+                        "If you are the only candidate, the unhappiest citizen stands against you, so you can lose. They bring you their campaign pamphlet and give their speech aloud.",
+                        "A new election can be called three days after the last one. A sitting citizen mayor stands for re-election, and voters judge the promises and how you answered the mayor.",
+                        "Agreeing to an upgrade places the builder's work order. Agreeing to a new hut is a promise: place it within three days.",
+                        "Operators: /townhall rush ends campaigns now, /townhall notes has citizens write notes now, /townhall report has the mayor report now."));
         Guides.introduce(MOD_ID + ":elections", "elections",
                 "Tell them they can stand for mayor: craft a Ballot Box, right-click it to put their slogan and promises forward, and give a speech; then the colony votes.",
                 MOD_ID + ":guide", (player, colony) -> colony.getServerBuildingManager().hasTownHall());
     }
 
-    /** What citizens know about the colony's politics: a running campaign, the mayor, and being the mayor. */
-    static List<PromptContribution> politics(Elections running, int colonyId, UUID citizenId) {
+    /**
+     * What citizens know about the colony's politics: a running campaign, the mayor and their record, and
+     * being the mayor or talking with them.
+     */
+    public static List<PromptContribution> politics(Elections running, int colonyId, UUID citizenId, @Nullable UUID playerId) {
         List<PromptContribution> contributions = new ArrayList<>();
         Elections.Election election = running.electionById(colonyId);
         if (election != null && !election.candidates.isEmpty()) {
@@ -173,13 +220,26 @@ public class TownHall {
                     ElectionText.campaignObservation(election.candidates.stream().map(c -> c.name).toList(),
                             election.candidates.stream().map(c -> c.slogan).toList(), election.voting)));
         }
-        Elections.Mayor mayor = running.mayorById(colonyId);
+        String key = running.mayorKeyById(colonyId);
+        Elections.Mayor mayor = key == null ? null : running.mayors().get(key);
         if (mayor != null) {
+            MayorsOffice office = running.office();
+            String record = office.record(key, mayor);
             contributions.add(PromptContribution.observation(MOD_ID + ":mayor", "Colony politics",
-                    ElectionText.mayorObservation(mayor.name, mayor.sinceDay, mayor.result)));
-            if (mayor.citizen && mayor.id.equals(citizenId)) {
+                    ElectionText.mayorObservation(mayor.name, mayor.sinceDay, mayor.result) + (record.isBlank() ? "" : " " + record)));
+            boolean self = mayor.citizen && mayor.id.equals(citizenId);
+            if (self) {
+                Office.Proposal pending = mayor.proposal != null && mayor.proposal.status == Office.ProposalStatus.PENDING
+                        ? mayor.proposal : null;
                 contributions.add(PromptContribution.instruction(MOD_ID + ":mayor_role", "Your office",
-                        ElectionText.mayorInstruction(mayor.sinceDay)));
+                        ElectionText.mayorInstruction(mayor.sinceDay) + " " + OfficeText.mayorDuties(office.needLines(key, mayor),
+                                pending, AiToolRegistry.providerName(MOD_ID, MayorsOffice.TOOL))));
+            } else if (!mayor.citizen && mayor.id.equals(playerId)) {
+                contributions.add(PromptContribution.instruction(MOD_ID + ":mayor_talk", "Colony politics",
+                        OfficeText.talkingToMayor(mayor.name)));
+            } else {
+                contributions.add(PromptContribution.instruction(MOD_ID + ":mayor_weight", "Colony politics",
+                        OfficeText.listenToMayor(mayor.name)));
             }
         }
         return contributions;
@@ -214,6 +274,14 @@ public class TownHall {
 
     private static @Nullable IColony colonyAt(ServerPlayer player, BlockPos pos) {
         return IColonyManager.getInstance().getIColony(player.level(), pos);
+    }
+
+    /** "Agree" or "Turn down" at the Mayor's desk of the ballot box window. */
+    private static void answerAtBallotBox(ServerPlayer player, BlockPos pos, boolean accept) {
+        IColony colony = colonyAt(player, pos);
+        if (colony == null || elections == null) return;
+        elections.office().answer(colony, player, accept, "");
+        sendBallot(player, pos);
     }
 
     /** Sends the ballot box window the colony's election; an empty colony name means "not in a colony". */

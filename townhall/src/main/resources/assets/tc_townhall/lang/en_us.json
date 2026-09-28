@@ -22,5 +22,13 @@
   "tc_townhall.gui.ballot_box.not_member": "Only members of this colony can stand for its mayor.",
   "tc_townhall.gui.ballot_box.how": "Standing calls an election. Citizens hear your slogan and plans and pass them on; with voice chat you then have 30 seconds for a speech. A citizen may stand against you. Then every grown citizen votes.",
   "tc_townhall.gui.ballot_box.campaigning": "Talk to your citizens until voting starts: they vote on what they heard and how they feel about you. You can update your platform or speak again.",
-  "tc_townhall.gui.ballot_box.join": "An election is running. You can still stand until voting begins."
+  "tc_townhall.gui.ballot_box.join": "An election is running. You can still stand until voting begins.",
+  "item.tc_townhall.mayor_hat": "Mayor's Hat",
+  "tc_townhall.gui.ballot_box.office": "Mayor's desk",
+  "tc_townhall.gui.ballot_box.promises": "Promises",
+  "tc_townhall.gui.ballot_box.no_promises": "No promises of the mayor are known yet.",
+  "tc_townhall.gui.ballot_box.accept": "Agree",
+  "tc_townhall.gui.ballot_box.refuse": "Turn down",
+  "tc_townhall.gui.ballot_box.no_proposal": "The mayor has no proposal for you right now.",
+  "tc_townhall.gui.ballot_box.earlier": "Earlier proposals"
 }
