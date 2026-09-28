@@ -170,7 +170,8 @@ final class PlaytestScenario {
             "mayor", List.of(
                     new Step(20, "day: standing in the colony", List.of("playtest home", "time set 6000", "weather clear")),
                     new Step(25, "the player wears the mayor's hat, out in the open", List.of(
-                            "item replace entity @s armor.head with tc_townhall:mayor_hat", "tp @s ~24 ~ ~24 0 15",
+                            // Only the sitting mayor may wear it.
+                            "townhall appoint me", "item replace entity @s armor.head with tc_townhall:mayor_hat", "tp @s ~24 ~ ~24 0 15",
                             "client:hud off", "client:camera front")),
                     new Step(28, "screenshot: the player mayor", List.of("client:screenshot mayor_player")),
                     new Step(30, "back in the colony", List.of("client:camera first", "playtest home")),

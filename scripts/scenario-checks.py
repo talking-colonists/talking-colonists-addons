@@ -314,6 +314,8 @@ SCENARIOS = {
     ],
     "mayor": [
         said_any("the mayor gives a report", start="the mayor reports", end="a ballot box"),
+        # Playtest 2026-09-28: the mayor "accepted" its own proposal before saying a word.
+        logged_none("nobody answers the proposal for the player", r"answered mayor .* proposal", start="the mayor reports"),
         said_none("no guard tower upgrade is proposed", text=r"upgrad\w* (the |our |a )?guard ?tower",
                   start="the mayor reports"),
         judged("the proposals fit MineColonies' rules",
