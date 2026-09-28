@@ -302,8 +302,12 @@ SCENARIOS = {
         said_none("no pair conversation goes on at night", kind="CITIZEN_PAIR", start="citizens are asleep"),
         ("a pair chat going at nightfall ends when they fall asleep", pair_ends_asleep),
     ],
-    "windows": [check for window in ("notice board", "ballot box", "suggestion box", "handbook")
-                for check in window_checks(window)],
+    "windows": [check for window in ("notice board", "ballot box", "suggestion box", "handbook",
+                                     "suggestion box from above")
+                for check in window_checks(window)] + [
+        logged_any("breaking the upper half takes the lower", r"TC_BLOCK the lower half went too"),
+        logged_any("breaking the lower half takes the upper", r"TC_BLOCK the upper half went too"),
+    ],
     "election": [
         logged_any("a citizen stands against the player", r"stands for mayor against"),
         logged_any("the rival hands over a pamphlet", r"hands you a campaign pamphlet|campaign pamphlet"),

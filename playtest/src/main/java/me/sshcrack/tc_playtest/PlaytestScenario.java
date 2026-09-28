@@ -94,7 +94,31 @@ final class PlaytestScenario {
                     new Step(47, "handbook: opened", List.of("client:useitem")),
                     new Step(49, "handbook: close clicked", List.of("client:screen", "client:screenshot window_handbook", "client:click close")),
                     new Step(50, "handbook: after close", List.of("client:screen", "client:close", "item replace entity @s weapon.mainhand with air")),
-                    new Step(52, "scenario done", List.of())),
+                    // The Town Hall blocks in daylight, for the eye; the Suggestion Box stands two blocks tall.
+                    new Step(54, "blocks: on a platform in the open", List.of("fill ~-6 ~19 ~-8 ~6 ~19 ~3 minecraft:grass_block",
+                            "fill ~-6 ~20 ~-8 ~6 ~26 ~3 minecraft:air", "tp @s ~ ~20 ~ 180 10", "time set 6000", "weather clear")),
+                    new Step(56, "blocks: placed", List.of(
+                            "setblock ~-3 ~ ~-3 tc_townhall:ballot_box[facing=south,phase=idle]",
+                            "setblock ~-1 ~ ~-3 tc_townhall:ballot_box[facing=south,phase=voting]",
+                            "setblock ~1 ~ ~-3 tc_townhall:suggestion_box[facing=south]",
+                            "setblock ~3 ~ ~-3 tc_townhall:suggestion_box[facing=south,has_notes=true]", "client:hud off")),
+                    // A screenshot takes the frame already drawn, so the camera moves a step before.
+                    new Step(58, "screenshot: from the front", List.of("client:screenshot blocks_front", "tp @s ~4 ~ ~-1 125 10")),
+                    new Step(60, "screenshot: from the side", List.of("client:screenshot blocks_side")),
+                    new Step(63, "back in front of the suggestion box", List.of("client:hud on", "tp @s ~-3 ~ ~1 180 0")),
+                    // Its upper half, the box at eye height, opens it too.
+                    new Step(65, "suggestion box from above: opened", List.of("client:useblock 0 1 -3")),
+                    new Step(67, "suggestion box from above: close clicked", List.of("client:screen", "client:click close")),
+                    new Step(68, "suggestion box from above: after close", List.of("client:screen", "client:close")),
+                    new Step(70, "the upper half is removed", List.of("setblock ~ ~1 ~-3 air")),
+                    new Step(72, "the lower half went too", List.of(
+                            "execute if block ~ ~ ~-3 air run say TC_BLOCK the lower half went too",
+                            "execute unless block ~ ~ ~-3 air run say TC_BLOCK the lower half stayed")),
+                    new Step(74, "the lower half is removed", List.of("setblock ~2 ~ ~-3 air")),
+                    new Step(76, "the upper half went too", List.of(
+                            "execute if block ~2 ~1 ~-3 air run say TC_BLOCK the upper half went too",
+                            "execute unless block ~2 ~1 ~-3 air run say TC_BLOCK the upper half stayed")),
+                    new Step(80, "scenario done", List.of())),
             // A brand-new colony: the welcome, a chat with the citizen who gave it (typed, as with
             // /citizen_chat), asking how to tell everyone something, then the next introduction.
             "firstday", List.of(
@@ -142,7 +166,7 @@ final class PlaytestScenario {
                             "client:type bodyInput Next Sunday we hold a harvest fair at the town hall. Bring your best pumpkins and something to share!",
                             "client:screenshot notice_typed", "client:click post")),
                     new Step(28, "window closed", List.of("client:close")),
-                    new Step(150, "replies are collected", List.of("noticeboard rush", "await 120 Pinned \\d+ replies")),
+                    new Step(150, "replies are collected", List.of("noticeboard rush", "await 240 Pinned \\d+ replies")),
                     new Step(155, "the board is read again", List.of("client:useblock 0 0 2")),
                     new Step(157, "replies on the board", List.of("client:dump replies", "client:dump reach",
                             "client:screenshot notice_replies", "client:close")),

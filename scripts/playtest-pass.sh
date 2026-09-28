@@ -46,7 +46,11 @@ PY
     fi
   } >> "$summary"
   [[ $status -ne 0 ]] && failed=1
-  grep -E "^(PASS|FAIL|SKIP)  " "$pass/$scenario.txt" | grep -v "^PASS" || echo "all checks passed"
+  if ! grep -qE "^(PASS|FAIL|SKIP)  " "$pass/$scenario.txt"; then
+    echo "FAIL  no checks ran (exit $status); see $pass/$scenario.txt"
+  else
+    grep -E "^(PASS|FAIL|SKIP)  " "$pass/$scenario.txt" | grep -v "^PASS" || echo "all checks passed"
+  fi
 done
 echo
 echo "Summary: $summary"
