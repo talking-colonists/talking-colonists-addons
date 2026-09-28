@@ -1,5 +1,6 @@
 package me.sshcrack.tc_townhall;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import org.junit.jupiter.api.Test;
 
@@ -101,5 +102,37 @@ class ElectionTextTest {
         assertEquals("Jobs first.", ElectionText.withoutSpeaker("Dalton E. Clerk", "Dalton E. Clerk: Jobs first. "));
         assertEquals("Jobs first.", ElectionText.withoutSpeaker("Dalton E. Clerk", "Jobs first."));
         assertEquals("\"Homes first\"\n\nMore houses.\n\nVote Remy for mayor!", ElectionText.pamphlet("Remy", "Homes first", "More houses."));
+    }
+
+    @Test
+    void manyVotersVoteInOneBatch() {
+        List<String> names = List.of("Dev", "Louisa X. Cripps");
+        List<String> voters = List.of("Riley L. Groston", "Heath H. Altena", "Lacey C. Clark");
+        String directive = ElectionText.batchVoteDirective(
+                List.of(new ElectionText.CandidateBrief("Dev", "Walls before winter.", null),
+                        new ElectionText.CandidateBrief("Louisa X. Cripps", "A school for every child.", null)),
+                List.of(new ElectionText.VoterBrief("Riley L. Groston", "pupil, happiness 7/10", List.of("Louisa X. Cripps"), null),
+                        new ElectionText.VoterBrief("Heath H. Altena", "no job, happiness 4/10", List.of(), "About Dev: trusts them.")));
+        assertTrue(directive.contains("Heard the campaign of Louisa X. Cripps."));
+        assertTrue(directive.contains("Heard no campaign. About Dev: trusts them."));
+        assertTrue(directive.length() < 4_000);
+
+        JsonObject answer = new JsonObject();
+        JsonArray votes = new JsonArray();
+        JsonObject first = vote("louisa x. cripps", "She cares about school.");
+        first.addProperty("voter", "Riley L. Groston");
+        votes.add(first);
+        JsonObject stranger = vote("Dev", "x");
+        stranger.addProperty("voter", "Nobody");
+        votes.add(stranger);
+        JsonObject second = vote("Dev", "Walls matter.");
+        second.addProperty("voter", "heath h. altena");
+        votes.add(second);
+        answer.add("votes", votes);
+        var parsed = ElectionText.parseBatchVotes(answer, voters, names);
+        assertEquals(2, parsed.size());
+        assertEquals(new ElectionText.Vote(1, "She cares about school."), parsed.get("Riley L. Groston"));
+        assertEquals(0, parsed.get("Heath H. Altena").candidate());
+        assertNotNull(ElectionText.batchVoteSchema(voters, names).getAsJsonObject("properties").get("votes"));
     }
 }

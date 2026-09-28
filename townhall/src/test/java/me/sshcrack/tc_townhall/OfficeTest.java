@@ -44,6 +44,36 @@ class OfficeTest {
     }
 
     @Test
+    void aBuilderOnlyBuildsUpToTheirOwnLevel() {
+        // Playtest 2026-09-28: level 3 residences and a level 1 builder's hut; the mayor proposed level 4.
+        List<Office.Hut> huts = List.of(
+                new Office.Hut("residence", 1L, 3, 5, false),
+                new Office.Hut("builder", 2L, 1, 5, false));
+        Office.Proposal proposal = Office.choose(needs(Need.HOUSING, 4), Map.of(), huts, List.of(), 7, 1);
+        assertNotNull(proposal);
+        assertEquals(2L, proposal.pos);
+        assertEquals("upgrade the builder's hut to level 2, so that the builder can then upgrade the residence", proposal.what());
+        assertEquals("upgrade the residence to level 4",
+                Office.choose(needs(Need.HOUSING, 4), Map.of(), huts, List.of(), 7, 4).what());
+        assertEquals("upgrade the residence to level 4",
+                Office.choose(needs(Need.HOUSING, 4), Map.of(), huts, List.of(), 7, 5).what(), "level 5 builds anything");
+    }
+
+    @Test
+    void workOnTheBuildersHutKeepsAPromiseItUnblocks() {
+        List<Office.Hut> huts = List.of(
+                new Office.Hut("residence", 1L, 3, 5, false),
+                new Office.Hut("builder", 2L, 1, 5, false));
+        Office.Proposal proposal = Office.choose(needs(Need.HOUSING, 4), Map.of(), huts, List.of(), 7, 1);
+        proposal.answeredDay = 7;
+        List<Office.Hut> building = List.of(
+                new Office.Hut("residence", 1L, 3, 5, false),
+                new Office.Hut("builder", 2L, 1, 5, true, "Faye"));
+        assertEquals(Office.Step.STARTED, Office.followUp(proposal, Need.HOUSING, building, 8));
+        assertEquals("Faye", proposal.builder);
+    }
+
+    @Test
     void busyOrFinishedHutsAreSkippedAndAMissingKindIsBuilt() {
         List<Office.Hut> huts = List.of(
                 new Office.Hut("residence", 1L, 5, 5, false),

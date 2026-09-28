@@ -6,7 +6,9 @@ import com.google.gson.JsonObject;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Pure text for elections: what citizens hear, what voters and rivals are asked, and the results. */
 public final class ElectionText {
@@ -158,6 +160,69 @@ public final class ElectionText {
         properties.add("vote", vote);
         properties.add("reason", string("Why, in one sentence"));
         return object(properties, "vote", "reason");
+    }
+
+    /**
+     * A voter decided together with others in one request (large colonies): who they are, whose
+     * campaign reached them, and how they feel about the candidates, all in a line or two.
+     */
+    public record VoterBrief(String name, String about, List<String> heard, @Nullable String feelings) {
+    }
+
+    /**
+     * Several citizens vote at once, each as themselves. {@code candidates} carry their full platform as
+     * {@link CandidateBrief#heardPlatform()}; a voter only knows the platforms in their {@code heard}.
+     */
+    public static String batchVoteDirective(List<CandidateBrief> candidates, List<VoterBrief> voters) {
+        StringBuilder text = new StringBuilder("Today the colony elects its mayor. Decide how each citizen below votes, "
+                + "each one as themselves. The candidates:\n");
+        for (CandidateBrief candidate : candidates) {
+            text.append("- ").append(candidate.name()).append(": ")
+                    .append(candidate.heardPlatform() == null ? "(no platform)" : cut(candidate.heardPlatform().strip(), 300));
+            if (candidate.record() != null) text.append(" Their record: ").append(cut(candidate.record(), 200));
+            text.append('\n');
+        }
+        text.append("\nThe voters:\n");
+        for (VoterBrief voter : voters) {
+            text.append("- ").append(voter.name()).append(" (").append(voter.about()).append("). ")
+                    .append(voter.heard().isEmpty() ? "Heard no campaign." : "Heard the campaign of " + String.join(" and ", voter.heard()) + ".");
+            if (voter.feelings() != null) text.append(' ').append(voter.feelings());
+            text.append('\n');
+        }
+        text.append("\nA citizen only knows the platforms they heard; one who heard none goes by their feelings and needs. "
+                + "Each may abstain. Give each reason in one sentence of at most 150 characters, in their own voice.");
+        return text.toString();
+    }
+
+    public static JsonObject batchVoteSchema(List<String> voters, List<String> names) {
+        JsonObject voter = string("The voter's name");
+        JsonArray voterNames = new JsonArray();
+        voters.forEach(voterNames::add);
+        voter.add("enum", voterNames);
+        JsonObject one = voteSchema(names);
+        one.getAsJsonObject("properties").add("voter", voter);
+        one.getAsJsonArray("required").add("voter");
+        JsonObject list = new JsonObject();
+        list.addProperty("type", "array");
+        list.add("items", one);
+        JsonObject properties = new JsonObject();
+        properties.add("votes", list);
+        return object(properties, "votes");
+    }
+
+    /** Voter name → vote, for the votes in the answer that name a voter and someone on the ballot. */
+    public static Map<String, Vote> parseBatchVotes(@Nullable JsonObject json, List<String> voters, List<String> names) {
+        Map<String, Vote> votes = new HashMap<>();
+        if (json == null || !json.has("votes") || !json.get("votes").isJsonArray()) return votes;
+        for (JsonElement element : json.getAsJsonArray("votes")) {
+            if (!element.isJsonObject()) continue;
+            String voter = text(element.getAsJsonObject().get("voter"));
+            Vote vote = parseVote(element.getAsJsonObject(), names);
+            if (voter == null || vote == null) continue;
+            voters.stream().filter(name -> name.equalsIgnoreCase(voter.strip())).findFirst()
+                    .ifPresent(name -> votes.putIfAbsent(name, vote));
+        }
+        return votes;
     }
 
     /** The vote in the answer; null when it names nobody on the ballot. */
