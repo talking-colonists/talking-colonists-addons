@@ -210,6 +210,21 @@ public final class Elections {
         return mayor;
     }
 
+    /** Makes {@code player} the mayor without an election (testing); they already have the hat. */
+    public Mayor appoint(IColony colony, ServerPlayer player, String platform) {
+        Mayor mayor = new Mayor();
+        mayor.name = player.getGameProfile().getName();
+        mayor.id = player.getUUID();
+        mayor.sinceDay = colony.getDay();
+        mayor.result = mayor.name + " was appointed mayor.";
+        mayor.platform = platform;
+        mayor.hatDelivered = true;
+        Mayor previous = state.mayors.put(key(colony), mayor);
+        office.elected(colony, previous, mayor);
+        save();
+        return mayor;
+    }
+
     /** The mayor is gone: no mayor, and a new election may be called right away. */
     void vacate(String key) {
         state.mayors.remove(key);

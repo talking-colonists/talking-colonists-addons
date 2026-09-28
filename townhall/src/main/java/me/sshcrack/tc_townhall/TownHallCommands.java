@@ -31,7 +31,19 @@ final class TownHallCommands {
                             + " on to voting within a few seconds."), false);
                     return count;
                 }))
-                .then(Commands.literal("appoint").executes(context -> {
+                .then(Commands.literal("appoint").then(Commands.literal("me").executes(context -> {
+                    ServerPlayer player = context.getSource().getPlayerOrException();
+                    IColony colony = IColonyManager.getInstance().getIColony(player.level(), player.blockPosition());
+                    Elections elections = TownHall.elections();
+                    if (elections == null || colony == null) {
+                        context.getSource().sendFailure(Component.literal("Stand inside a colony."));
+                        return 0;
+                    }
+                    elections.appoint(colony, player, "I will see that everyone has a home, work and enough to eat.");
+                    context.getSource().sendSuccess(() -> Component.literal("You are now the mayor of " + colony.getName()
+                            + " (appointed, for testing)."), false);
+                    return 1;
+                })).executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
                     IColony colony = IColonyManager.getInstance().getIColony(player.level(), player.blockPosition());
                     Elections elections = TownHall.elections();
