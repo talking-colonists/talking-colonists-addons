@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Mayoral elections. A player stands by right-clicking their colony's Town Hall block with a signed
@@ -93,6 +94,8 @@ public final class Elections {
         public long votingAt;
         public boolean voting;
         public boolean rivalAsked;
+        /** Colony members were told voting starts in a minute. */
+        public boolean reminded;
         public long votingEndsAt;
         public List<Candidate> candidates = new ArrayList<>();
         /** Citizen id → vote. */
@@ -130,13 +133,16 @@ public final class Elections {
     private final MinecraftServer server;
     private final Path file;
     private final Couriers couriers;
+    private final ElectionBars bars;
     private State state = new State();
+    private final Set<UUID> speaking = new HashSet<>();
     private int ticks;
 
     Elections(MinecraftServer server, Path file) {
         this.server = server;
         this.file = file;
         this.couriers = new Couriers(server, TownHall.MOD_ID + ":results");
+        this.bars = new ElectionBars(server);
     }
 
     private long now() {
@@ -175,6 +181,18 @@ public final class Elections {
     public boolean stand(ServerPlayer player, IColony colony, ItemStack book, BlockPos townHall) {
         BookText text = BookText.read(book);
         if (text == null) return false;
+        return stand(player, colony, text.title(), text.body(), townHall);
+    }
+
+    /**
+     * The player stands for mayor with a slogan and a platform, typed in the Ballot Box window or read from
+     * a book; citizens near {@code where} hear it first. Then, with voice chat, they give a speech.
+     */
+    public boolean stand(ServerPlayer player, IColony colony, String title, String body, BlockPos where) {
+        if (title.isBlank() || body.isBlank()) {
+            tell(player, "Give your campaign a slogan and a few words about what you will do.");
+            return false;
+        }
         if (!colony.getPermissions().isColonyMember(player)) {
             tell(player, "Only members of " + colony.getName() + " can stand for its mayor.");
             return false;
@@ -214,32 +232,50 @@ public final class Elections {
             candidate.name = player.getGameProfile().getName();
             election.candidates.add(candidate);
         }
-        candidate.slogan = ElectionText.slogan(text.title());
-        candidate.platform = ElectionText.cut(text.body().strip().replaceAll("\\s+", " "), ElectionText.MAX_PLATFORM_CHARS);
-        announce(colony, candidate, townHall, ElectionText.candidacy(candidate.name, candidate.slogan, candidate.platform));
+        candidate.slogan = ElectionText.slogan(title);
+        candidate.platform = ElectionText.cut(body.strip().replaceAll("\\s+", " "), ElectionText.MAX_PLATFORM_CHARS);
+        announce(colony, candidate, where, ElectionText.candidacy(candidate.name, candidate.slogan, candidate.platform));
         save();
 
         long minutes = Math.max(1, (election.votingAt - now()) / 1_200);
         tell(player, (renewed ? "Your platform is updated: \"" : "You stand for mayor of " + colony.getName() + " with \"")
-                + candidate.slogan + "\". Citizens at the town hall heard it and will spread the word. Voting starts in about "
+                + candidate.slogan + "\". Citizens nearby heard it and will spread the word. Voting starts in about "
                 + minutes + " minutes; talk to your citizens until then.");
-        giveSpeech(player, colony, election, candidate, townHall);
+        giveSpeech(player, colony, election, candidate, where);
         return true;
     }
 
-    /** With voice chat: the player has 30 seconds to speak; the transcript is heard at the town hall. */
-    private void giveSpeech(ServerPlayer player, IColony colony, Election election, Candidate candidate, BlockPos townHall) {
-        if (!TalkingColonistsApi.supports(ApiFeature.PLAYER_SPEECH_CAPTURE)) return;
+    /** A player candidate speaks to the crowd again during the campaign. Returns whether the speech starts. */
+    public boolean speakAgain(ServerPlayer player, IColony colony, BlockPos where) {
+        Election election = election(colony);
+        Candidate candidate = election == null ? null : election.candidates.stream()
+                .filter(c -> !c.citizen && c.id.equals(player.getUUID())).findFirst().orElse(null);
+        if (candidate == null || election.voting) {
+            tell(player, "Only candidates can give a speech, and only before voting begins.");
+            return false;
+        }
+        if (!TalkingColonistsApi.supports(ApiFeature.PLAYER_SPEECH_CAPTURE)) {
+            tell(player, "Speeches need Simple Voice Chat.");
+            return false;
+        }
+        giveSpeech(player, colony, election, candidate, where);
+        return true;
+    }
+
+    /** With voice chat: the player has 30 seconds to speak; the transcript is heard by citizens near {@code where}. */
+    private void giveSpeech(ServerPlayer player, IColony colony, Election election, Candidate candidate, BlockPos where) {
+        if (!TalkingColonistsApi.supports(ApiFeature.PLAYER_SPEECH_CAPTURE) || !speaking.add(player.getUUID())) return;
         PlayerSpeechCapture.capture(player, SPEECH_DURATION).whenComplete((result, error) -> server.execute(() -> {
+            speaking.remove(player.getUUID());
             if (error != null || result == null) return;
             if (result.status() == SpeechCaptureResult.Status.TRANSCRIBED && result.transcript() != null
                     && !result.transcript().isBlank()) {
                 if (!state.elections.contains(election) || election.voting) return;
-                announce(colony, candidate, townHall, ElectionText.speech(candidate.name, result.transcript()));
+                announce(colony, candidate, where, ElectionText.speech(candidate.name, result.transcript()));
                 candidate.platform = ElectionText.cut(candidate.platform + " Speech: " + result.transcript().strip(),
                         ElectionText.MAX_PLATFORM_CHARS);
                 save();
-                tell(player, "The crowd at the town hall heard your speech.");
+                tell(player, "The crowd heard your speech.");
             }
             // No voice chat, silence or no quota: the book alone is the platform.
         }));
@@ -264,6 +300,71 @@ public final class Elections {
         }
         if (result.isPublished() && result.broadcastId() != null) candidate.broadcastIds.add(result.broadcastId());
         else TownHall.LOGGER.info("Campaign broadcast for {} not published: {}", candidate.name, result.status());
+    }
+
+    /** What the colony's Ballot Box shows right now. */
+    public BallotView.Phase phase(IColony colony) {
+        Election election = election(colony);
+        if (election == null) return BallotView.Phase.IDLE;
+        return election.voting ? BallotView.Phase.VOTING : BallotView.Phase.CAMPAIGN;
+    }
+
+    /** The Ballot Box window's view of the colony's election, for {@code player}. */
+    public BallotView view(IColony colony, ServerPlayer player) {
+        BallotView view = new BallotView();
+        view.colony = colony.getName();
+        view.member = colony.getPermissions().isColonyMember(player);
+        view.speechSupported = TalkingColonistsApi.supports(ApiFeature.PLAYER_SPEECH_CAPTURE);
+        Election election = election(colony);
+        view.phase = phase(colony);
+        if (election != null) {
+            long until = election.voting ? election.votingEndsAt : election.votingAt;
+            view.minutesLeft = (int) Math.max(0, (until - now() + 1_199) / 1_200);
+            int[] counts = ElectionText.tally(List.copyOf(election.votes.values()), election.candidates.size());
+            for (int i = 0; i < election.candidates.size(); i++) {
+                Candidate candidate = election.candidates.get(i);
+                BallotView.Entry entry = new BallotView.Entry();
+                entry.name = candidate.name;
+                entry.slogan = candidate.slogan;
+                entry.platform = candidate.platform;
+                entry.citizen = candidate.citizen;
+                entry.you = !candidate.citizen && candidate.id.equals(player.getUUID());
+                entry.votes = counts[i];
+                view.candidates.add(entry);
+                if (entry.you) view.youStand = true;
+            }
+            view.voted = election.votes.size();
+            view.voters = Math.max(view.voted, voters(colony, election).size());
+            election.votes.forEach((citizenId, vote) -> {
+                BallotView.Reason reason = new BallotView.Reason();
+                reason.voter = election.voterNames.getOrDefault(citizenId, "A citizen");
+                reason.candidate = vote.candidate() >= 0 && vote.candidate() < election.candidates.size()
+                        ? election.candidates.get(vote.candidate()).name : "";
+                reason.reason = vote.reason();
+                view.reasons.add(reason);
+            });
+            view.canStand = view.member && !election.voting && (view.youStand || election.candidates.size() < MAX_CANDIDATES);
+        } else {
+            Long last = state.lastElectionAt.get(key(colony));
+            view.nextElectionDays = last == null ? 0 : (int) Math.max(0, (COOLDOWN_TICKS - (now() - last) + 23_999) / 24_000);
+            view.canStand = view.member && view.nextElectionDays == 0;
+        }
+        Mayor mayor = mayor(colony);
+        if (mayor != null) {
+            view.mayor = mayor.name;
+            view.mayorSinceDay = mayor.sinceDay;
+            view.mayorResult = mayor.result;
+        }
+        return view;
+    }
+
+    private void showBar(IColony colony, Election election) {
+        long left = Math.max(0, (election.voting ? election.votingEndsAt : election.votingAt) - now());
+        int voters = Math.max(election.votes.size(), voters(colony, election).size());
+        float progress = election.voting ? (voters == 0 ? 0 : (float) election.votes.size() / voters)
+                : 1 - (float) left / CAMPAIGN_TICKS;
+        bars.show(colony, election.id, election.voting,
+                ElectionText.barTitle(election.voting, (int) ((left + 1_199) / 1_200), election.votes.size(), voters), progress);
     }
 
     /** Operators: every campaign moves on to voting now. */
@@ -291,10 +392,16 @@ public final class Elections {
             }
             if (!election.voting) {
                 if (now() >= election.votingAt) campaignEnds(colony, election);
+                else if (!election.reminded && election.votingAt - now() <= 1_200) {
+                    election.reminded = true;
+                    tellMembers(colony, "Voting for mayor of " + colony.getName() + " starts in a minute.");
+                }
             } else {
                 collectVotes(colony, election);
             }
+            if (state.elections.contains(election)) showBar(colony, election);
         }
+        bars.keepOnly(state.elections.stream().map(election -> election.id).collect(Collectors.toSet()));
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             bringResults(player);
         }
@@ -585,6 +692,7 @@ public final class Elections {
 
     void stopAll() {
         couriers.stopAll();
+        bars.clear();
     }
 
     void load() {

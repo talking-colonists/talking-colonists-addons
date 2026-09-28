@@ -9,7 +9,7 @@ public final class SuggestionText {
 
     /** What a citizen is asked when writing a note for the box. */
     public static String directive() {
-        return "The colony keeps a suggestion box at the town hall. Write one short note to drop in it, in your own "
+        return "The colony keeps a suggestion box. Write one short note to drop in it, in your own "
                 + "voice: one real concern or wish about your own life or the colony, based only on facts you actually "
                 + "know right now. Do not blame anyone for things that could not have been done yet. If nothing is "
                 + "really wrong, write a small wish or a word of thanks instead. 1 or 2 sentences, at most 150 "

@@ -10,6 +10,7 @@ from Talking Colonists, or ask a citizen.
 | Campfire Nights | [campfire.md](campfire.md) |
 | Postal Service | [postal.md](postal.md) |
 | Tavern Recruiter | [tavern.md](tavern.md) |
+| Town Hall | [townhall.md](townhall.md) |
 
 Every addon needs [Talking Colonists](https://github.com/talking-colonists/talking-colonists) 2.1 or
 newer with a Gemini API key, and MineColonies. Hearing citizens needs Simple Voice Chat.

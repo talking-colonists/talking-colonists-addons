@@ -14,8 +14,11 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.LevelResource;
 /*? if forge {*/
 /*import net.minecraftforge.common.MinecraftForge;
@@ -25,8 +28,11 @@ import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 *//*?}*/
 /*? if neoforge {*/
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -42,9 +48,15 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import com.google.gson.Gson;
+import me.sshcrack.tc_townhall.block.BallotBoxBlock;
+import me.sshcrack.tc_townhall.block.BallotBoxBlockEntity;
+import me.sshcrack.tc_townhall.block.SuggestionBoxBlockEntity;
+import me.sshcrack.tc_townhall.block.TownHallBlocks;
 import me.sshcrack.tc_townhall.dev.DevSelfTest;
+import me.sshcrack.tc_townhall.shared.net.BlockActions;
 
-/** Mod entry point: stand for mayor at the Town Hall block, and the suggestion box next to it. */
+/** Mod entry point: stand for mayor at the Town Hall block, and the Suggestion Box block. */
 @Mod(TownHall.MOD_ID)
 public class TownHall {
     public static final String MOD_ID = /*$ mod_id*/ "tc_townhall";
@@ -57,8 +69,35 @@ public class TownHall {
     private static @Nullable Elections elections;
     private static @Nullable SuggestionBox suggestions;
     private static @Nullable MinecraftServer server;
+    private static final Gson GSON = new Gson();
+    private static final int PHASE_CHECK_TICKS = 100;
+    private static int ticks;
 
-    public TownHall() {
+    /*? if neoforge {*/
+    public TownHall(IEventBus modBus, ModContainer container) {
+    /*?}*/
+    /*? if forge {*/
+    /*public TownHall() {
+        var modBus = FMLJavaModLoadingContext.get().getModEventBus();
+    *//*?}*/
+        // The blocks always register, so worlds that contain them load even when the addon stays inactive.
+        TownHallBlocks.register(modBus);
+        /*? if neoforge {*/
+        BlockActions.init(MOD_ID, modBus);
+        /*?}*/
+        /*? if forge {*/
+        /*BlockActions.init(MOD_ID);
+        *//*?}*/
+        BlockActions.on(SuggestionBoxBlockEntity.TAKE, TownHall::takeNote);
+        BlockActions.on(SuggestionBoxBlockEntity.DISCARD, (player, pos, index, text) -> {
+            if (player.level().getBlockEntity(pos) instanceof SuggestionBoxBlockEntity box) box.remove(index);
+        });
+        BlockActions.on(BallotBoxBlockEntity.VIEW, (player, pos, argument, text) -> sendBallot(player, pos));
+        BlockActions.on(BallotBoxBlockEntity.STAND, TownHall::standAtBallotBox);
+        BlockActions.on(BallotBoxBlockEntity.SPEAK, (player, pos, argument, text) -> {
+            IColony colony = colonyAt(player, pos);
+            if (colony != null && elections != null) elections.speakAgain(player, colony, pos);
+        });
         if (!TalkingColonistsApi.isAvailable() || !TalkingColonistsApi.supports(ApiFeature.BROADCAST_PUBLISHING)
                 || !TalkingColonistsApi.supports(ApiFeature.TEXT_GENERATION)) {
             LOGGER.warn("Town Hall needs Talking Colonists 2.1 or newer (broadcasts, text generation); it stays inactive");
@@ -108,19 +147,20 @@ public class TownHall {
 
     private static void registerGuide() {
         Guides.register(MOD_ID + ":guide", "Town Hall and Elections",
-                "Stand for mayor with a speech, and every citizen votes on what reached them. A barrel next to the town hall becomes a suggestion box for citizens' notes.",
+                "Stand for mayor with a speech, and every citizen votes on what reached them. A Suggestion Box collects citizens' notes about what worries them.",
                 List.of(
-                        "Write your platform in a book and quill and sign it; the title is your slogan.",
-                        "Right-click the Town Hall block while holding it to stand for mayor.",
-                        "With voice chat, you then have 30 seconds for a speech to the citizens there.",
-                        "The campaign lasts a day. Then the citizens vote, and one brings you the results book.",
-                        "Place a barrel within 4 blocks of the Town Hall block to get a suggestion box."),
+                        "Craft a Ballot Box (spruce planks around paper and an iron ingot) and place it in your colony.",
+                        "Right-click it, type a slogan and what you will do, and stand for mayor.",
+                        "With voice chat, you then have 30 seconds for a speech to the citizens nearby.",
+                        "The campaign lasts a day. Then the citizens vote; the box shows a live tally, and a citizen brings you the results.",
+                        "Craft a Suggestion Box (paper over a chest over a log): each morning unhappy citizens drop notes in it."),
                 List.of(
+                        "Right-clicking the Town Hall block with a signed book also works: the title is your slogan, the text your platform.",
                         "If you are the only candidate, the unhappiest citizen stands against you, so you can lose.",
                         "A new election can be called three days after the last one.",
                         "Operators: /townhall rush ends campaigns now, /townhall notes has citizens write notes now."));
         Guides.introduce(MOD_ID + ":elections", "elections",
-                "Tell them they can stand for mayor: sign a book with their slogan as the title and their promises inside, right-click the Town Hall block with it and give a speech; then the colony votes.",
+                "Tell them they can stand for mayor: craft a Ballot Box, right-click it to put their slogan and promises forward, and give a speech; then the colony votes.",
                 MOD_ID + ":guide", (player, colony) -> colony.getServerBuildingManager().hasTownHall());
     }
 
@@ -162,6 +202,54 @@ public class TownHall {
         elections.stand(player, colony, event.getItemStack(), pos);
     }
 
+    /** A player takes a note out of the suggestion box, as a one-page book. */
+    private static void takeNote(ServerPlayer player, BlockPos pos, int index, String text) {
+        BlockEntity entity = player.level().getBlockEntity(pos);
+        if (!(entity instanceof SuggestionBoxBlockEntity box)) return;
+        SuggestionBoxBlockEntity.Note note = box.remove(index);
+        if (note == null) return;
+        ItemStack book = SuggestionBox.note(note.writer(), note.text());
+        if (!player.getInventory().add(book)) player.drop(book, false);
+    }
+
+    private static @Nullable IColony colonyAt(ServerPlayer player, BlockPos pos) {
+        return IColonyManager.getInstance().getIColony(player.level(), pos);
+    }
+
+    /** Sends the ballot box window the colony's election; an empty colony name means "not in a colony". */
+    private static void sendBallot(ServerPlayer player, BlockPos pos) {
+        IColony colony = colonyAt(player, pos);
+        BallotView view = colony != null && elections != null ? elections.view(colony, player) : new BallotView();
+        BlockActions.view(player, pos, BallotBoxBlockEntity.VIEW_KIND, GSON.toJson(view));
+    }
+
+    /** "Stand" in the ballot box window: the text is the slogan, a line break, then the platform. */
+    private static void standAtBallotBox(ServerPlayer player, BlockPos pos, int argument, String text) {
+        IColony colony = colonyAt(player, pos);
+        if (colony == null || elections == null) {
+            Elections.tell(player, "Place the ballot box inside your colony.");
+            return;
+        }
+        int split = text.indexOf('\n');
+        String slogan = split < 0 ? text : text.substring(0, split);
+        String platform = split < 0 ? "" : text.substring(split + 1);
+        elections.stand(player, colony, slogan, platform, pos);
+    }
+
+    /** Shows each loaded ballot box its colony's election phase: a poster while campaigning, a flag while voting. */
+    private static void showPhases() {
+        for (BallotBoxBlockEntity box : BallotBoxBlockEntity.loaded()) {
+            if (box.getLevel() == null) continue;
+            IColony colony = IColonyManager.getInstance().getIColony(box.getLevel(), box.getBlockPos());
+            BallotView.Phase phase = colony != null && elections != null ? elections.phase(colony) : BallotView.Phase.IDLE;
+            BlockState state = box.getBlockState();
+            BallotBoxBlock.Phase shown = BallotBoxBlock.Phase.of(phase);
+            if (state.hasProperty(BallotBoxBlock.PHASE) && state.getValue(BallotBoxBlock.PHASE) != shown) {
+                box.getLevel().setBlockAndUpdate(box.getBlockPos(), state.setValue(BallotBoxBlock.PHASE, shown));
+            }
+        }
+    }
+
     /** The running elections, or null while no server runs. */
     public static @Nullable Elections elections() {
         return elections;
@@ -174,6 +262,7 @@ public class TownHall {
 
     private static void tick() {
         if (elections != null) elections.tick();
+        if (++ticks % PHASE_CHECK_TICKS == 0) showPhases();
         if (suggestions != null) suggestions.tick();
         // Only referenced when enabled, so the class (left out of the release jar) is never loaded otherwise.
         if (SELF_TEST && server != null) DevSelfTest.tick(server);
