@@ -7,8 +7,7 @@
     "spruce_planks": "minecraft:block/spruce_planks",
     "black_concrete": "minecraft:block/black_concrete",
     "iron_block": "minecraft:block/iron_block",
-    "red_wool": "minecraft:block/red_wool",
-    "white_wool": "minecraft:block/white_wool"
+    "ballot_plate": "tc_townhall:block/ballot_plate"
   },
   "elements": [
     {
@@ -949,314 +948,80 @@
       }
     },
     {
-      "name": "red_ribbon_left",
+      "name": "ballot_emblem",
       "from": [
-        4,
-        4,
-        2.5
+        3.75,
+        3.75,
+        2.15
       ],
       "to": [
-        5,
-        6,
-        3
-      ],
-      "rotation": {
-        "angle": 0,
-        "axis": "y",
-        "origin": [
-          4,
-          4,
-          2.5
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            4,
-            10,
-            5,
-            12
-          ],
-          "texture": "#red_wool"
-        },
-        "east": {
-          "uv": [
-            2.5,
-            10,
-            3,
-            12
-          ],
-          "texture": "#red_wool"
-        },
-        "south": {
-          "uv": [
-            4,
-            10,
-            5,
-            12
-          ],
-          "texture": "#red_wool"
-        },
-        "west": {
-          "uv": [
-            2.5,
-            10,
-            3,
-            12
-          ],
-          "texture": "#red_wool"
-        },
-        "up": {
-          "uv": [
-            4,
-            2.5,
-            5,
-            3
-          ],
-          "texture": "#red_wool"
-        },
-        "down": {
-          "uv": [
-            4,
-            2.5,
-            5,
-            3
-          ],
-          "texture": "#red_wool"
-        }
-      }
-    },
-    {
-      "name": "white_ribbon_right",
-      "from": [
-        5.5,
-        4,
-        2.5
-      ],
-      "to": [
-        6.5,
-        6,
-        3
-      ],
-      "rotation": {
-        "angle": 0,
-        "axis": "y",
-        "origin": [
-          5.5,
-          4,
-          2.5
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            5.5,
-            10,
-            6.5,
-            12
-          ],
-          "texture": "#white_wool"
-        },
-        "east": {
-          "uv": [
-            2.5,
-            10,
-            3,
-            12
-          ],
-          "texture": "#white_wool"
-        },
-        "south": {
-          "uv": [
-            5.5,
-            10,
-            6.5,
-            12
-          ],
-          "texture": "#white_wool"
-        },
-        "west": {
-          "uv": [
-            2.5,
-            10,
-            3,
-            12
-          ],
-          "texture": "#white_wool"
-        },
-        "up": {
-          "uv": [
-            5.5,
-            2.5,
-            6.5,
-            3
-          ],
-          "texture": "#white_wool"
-        },
-        "down": {
-          "uv": [
-            5.5,
-            2.5,
-            6.5,
-            3
-          ],
-          "texture": "#white_wool"
-        }
-      }
-    },
-    {
-      "name": "red_rosette",
-      "from": [
-        4,
-        6,
-        2.25
-      ],
-      "to": [
-        6.5,
-        8.5,
-        3
-      ],
-      "rotation": {
-        "angle": 0,
-        "axis": "y",
-        "origin": [
-          4,
-          6,
-          2.25
-        ]
-      },
-      "faces": {
-        "north": {
-          "uv": [
-            4,
-            7.5,
-            6.5,
-            10
-          ],
-          "texture": "#red_wool"
-        },
-        "east": {
-          "uv": [
-            2.25,
-            7.5,
-            3,
-            10
-          ],
-          "texture": "#red_wool"
-        },
-        "south": {
-          "uv": [
-            4,
-            7.5,
-            6.5,
-            10
-          ],
-          "texture": "#red_wool"
-        },
-        "west": {
-          "uv": [
-            2.25,
-            7.5,
-            3,
-            10
-          ],
-          "texture": "#red_wool"
-        },
-        "up": {
-          "uv": [
-            4,
-            2.25,
-            6.5,
-            3
-          ],
-          "texture": "#red_wool"
-        },
-        "down": {
-          "uv": [
-            4,
-            2.25,
-            6.5,
-            3
-          ],
-          "texture": "#red_wool"
-        }
-      }
-    },
-    {
-      "name": "white_rosette_center",
-      "from": [
-        4.75,
         6.75,
-        2
-      ],
-      "to": [
-        5.75,
         7.75,
-        2.25
+        3
       ],
       "rotation": {
         "angle": 0,
         "axis": "y",
         "origin": [
-          4.75,
-          6.75,
-          2
+          3.75,
+          3.75,
+          2.15
         ]
       },
       "faces": {
         "north": {
           "uv": [
-            4.75,
-            8.25,
-            5.75,
-            9.25
+            0,
+            0,
+            16,
+            16
           ],
-          "texture": "#white_wool"
+          "texture": "#ballot_plate"
         },
         "east": {
           "uv": [
-            2,
-            8.25,
-            2.25,
-            9.25
+            2.5,
+            10,
+            3,
+            12
           ],
-          "texture": "#white_wool"
+          "texture": "#iron_block"
         },
         "south": {
           "uv": [
-            4.75,
-            8.25,
-            5.75,
-            9.25
+            4,
+            10,
+            5,
+            12
           ],
-          "texture": "#white_wool"
+          "texture": "#iron_block"
         },
         "west": {
           "uv": [
-            2,
-            8.25,
-            2.25,
-            9.25
+            2.5,
+            10,
+            3,
+            12
           ],
-          "texture": "#white_wool"
+          "texture": "#iron_block"
         },
         "up": {
           "uv": [
-            4.75,
-            2,
-            5.75,
-            2.25
+            4,
+            2.5,
+            5,
+            3
           ],
-          "texture": "#white_wool"
+          "texture": "#iron_block"
         },
         "down": {
           "uv": [
-            4.75,
-            2,
-            5.75,
-            2.25
+            4,
+            2.5,
+            5,
+            3
           ],
-          "texture": "#white_wool"
+          "texture": "#iron_block"
         }
       }
     },
@@ -1491,7 +1256,7 @@
     "gui": {
       "rotation": [
         30,
-        225,
+        -135,
         0
       ],
       "scale": [
