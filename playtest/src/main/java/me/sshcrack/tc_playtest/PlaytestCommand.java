@@ -2,25 +2,38 @@ package me.sshcrack.tc_playtest;
 
 import com.minecolonies.api.colony.ICitizenData;
 import com.minecolonies.api.colony.IColony;
+import com.minecolonies.api.colony.buildings.IBuilding;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import me.sshcrack.mc_talking.api.colony.AddonColonyEvent;
+import me.sshcrack.mc_talking.api.conversation.CitizenConversationService;
+import me.sshcrack.mc_talking.api.conversation.ConversationStartResult;
 import me.sshcrack.mc_talking.api.colony.ColonyEventService;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import me.sshcrack.tc_playtest.shared.book.WrittenBooks;
 
+import java.util.Comparator;
 import java.util.List;
 import com.minecolonies.api.colony.IVisitorData;
 import net.minecraft.world.item.Items;
 
 /** {@code /playtest}: the checklist, plus small helpers its buttons use. */
 final class PlaytestCommand {
+    private static final double TALK_RANGE = 16;
+
     private PlaytestCommand() {
     }
 
@@ -35,7 +48,16 @@ final class PlaytestCommand {
                 .then(Commands.literal("letter").executes(PlaytestCommand::letter))
                 .then(Commands.literal("visitor").executes(PlaytestCommand::visitor))
                 .then(Commands.literal("notice").executes(PlaytestCommand::notice))
-                .then(Commands.literal("townhall").executes(PlaytestCommand::townHall)));
+                .then(Commands.literal("townhall").executes(PlaytestCommand::townHall))
+                .then(Commands.literal("stand").executes(PlaytestCommand::stand))
+                .then(Commands.literal("talk").executes(PlaytestCommand::talk))
+                .then(Commands.literal("probe").executes(PlaytestCommand::probe))
+                .then(Commands.literal("build").executes(context -> PlaytestBuild.order(context.getSource().getPlayerOrException()) ? 1 : 0))
+                .then(Commands.literal("goto")
+                        .then(Commands.literal("builder")
+                                .executes(context -> PlaytestBuild.gotoBuilder(context.getSource().getPlayerOrException()) ? 1 : 0))
+                        .then(Commands.literal("citizen")
+                                .executes(context -> PlaytestBuild.gotoCitizen(context.getSource().getPlayerOrException()) ? 1 : 0))));
     }
 
     private static int home(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
@@ -100,7 +122,7 @@ final class PlaytestCommand {
         return 0;
     }
 
-    /** A lectern with a notice to put on it, and a bell with an announcement to ring. */
+    /** A Notice Board block; also the lectern and bell shortcuts, with books for them. */
     private static int notice(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         ItemStack notice = WrittenBooks.create("Harvest fair", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
@@ -108,26 +130,83 @@ final class PlaytestCommand {
                         + "the finest wins a golden hoe. Who wants to help build the stalls?")));
         ItemStack crier = WrittenBooks.create("Fair today", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
                 List.of(Component.literal("The harvest fair starts at noon at the town hall. Everyone is welcome!")));
-        for (ItemStack stack : List.of(new ItemStack(Items.LECTERN), notice,
+        for (ItemStack stack : List.of(addonItem("tc_noticeboard:notice_board"), new ItemStack(Items.LECTERN), notice,
                 new ItemStack(Items.BELL), crier)) {
+            if (stack.isEmpty()) continue;
             if (!player.getInventory().add(stack)) player.drop(stack, false);
         }
-        context.getSource().sendSuccess(() -> Component.literal("[Playtest] Place the lectern in the colony and put \"Harvest fair\" on it. Place the bell and ring it holding \"Fair today\"."), false);
+        context.getSource().sendSuccess(() -> Component.literal("[Playtest] Place the Notice Board in the colony and right-click it to post a notice or announce something. "
+                + "Shortcuts: put \"Harvest fair\" on the lectern, or ring the bell holding \"Fair today\"."), false);
         return 1;
     }
 
-    /** A campaign book to stand for mayor with, and a barrel for the suggestion box. */
+    /** A campaign book to stand for mayor with, a Ballot Box and a Suggestion Box. */
     private static int townHall(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
-        ItemStack campaign = WrittenBooks.create("Walls before winter", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
-                List.of(Component.literal("I will build a wall around the colony before winter, hire two guards, and open "
-                        + "a bakery so nobody goes hungry.")));
-        for (ItemStack stack : List.of(campaign, new ItemStack(Items.BARREL))) {
+        ItemStack campaign = campaignBook(player);
+        for (ItemStack stack : List.of(campaign, addonItem("tc_townhall:ballot_box"), addonItem("tc_townhall:suggestion_box"))) {
+            if (stack.isEmpty()) continue;
             if (!player.getInventory().add(stack)) player.drop(stack, false);
         }
-        context.getSource().sendSuccess(() -> Component.literal("[Playtest] Right-click the Town Hall block holding \"Walls before winter\" "
-                + "to stand for mayor, then speak for up to 30 s. Place the barrel within 4 blocks of the Town Hall block: it becomes the suggestion box."), false);
+        context.getSource().sendSuccess(() -> Component.literal("[Playtest] Place the Ballot Box in your colony and right-click it: stand for mayor "
+                + "there (or right-click the Town Hall block holding \"Walls before winter\"), then speak for up to 30 s. "
+                + "Place the Suggestion Box anywhere in the colony and right-click it to read the notes."), false);
         return 1;
+    }
+
+    /** For scripted scenarios: stand for mayor as a player would, by using the campaign book on the Town Hall block. */
+    private static int stand(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        IColony colony = colony(player);
+        if (colony == null) return 0;
+        IBuilding townHall = colony.getServerBuildingManager().getTownHall();
+        if (townHall == null) {
+            context.getSource().sendFailure(Component.literal("[Playtest] The colony has no town hall."));
+            return 0;
+        }
+        BlockPos pos = townHall.getPosition();
+        player.setItemInHand(InteractionHand.MAIN_HAND, campaignBook(player));
+        player.gameMode.useItemOn(player, player.serverLevel(), player.getMainHandItem(), InteractionHand.MAIN_HAND,
+                new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
+        return 1;
+    }
+
+    /**
+     * For scripted scenarios: starts a conversation with the nearest citizen, as walking up and talking
+     * would; with {@code /citizen_chat on} chat lines are then said to them. Logged as TC_TALK.
+     */
+    private static int talk(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        AbstractEntityCitizen citizen = player.serverLevel().getEntitiesOfClass(AbstractEntityCitizen.class,
+                        player.getBoundingBox().inflate(TALK_RANGE), entity -> entity.isAlive() && entity.getCitizenData() != null)
+                .stream().min(Comparator.comparingDouble(entity -> entity.distanceToSqr(player))).orElse(null);
+        if (citizen == null) {
+            PlaytestMod.LOGGER.warn("TC_TALK no citizen within {} blocks", TALK_RANGE);
+            return 0;
+        }
+        ConversationStartResult result = CitizenConversationService.startPlayerConversation(player, citizen);
+        PlaytestMod.LOGGER.info("TC_TALK {} with {}", result.status(), citizen.getCitizenData().getName());
+        return 1;
+    }
+
+    /** For scenario checks: logs the colony's state as a TC_PROBE line. */
+    private static int probe(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        IColony colony = colony(context.getSource().getPlayerOrException());
+        if (colony == null) return 0;
+        List<ICitizenData> citizens = colony.getCitizenManager().getCitizens();
+        long asleep = citizens.stream().filter(ICitizenData::isAsleep).count();
+        PlaytestMod.LOGGER.info("TC_PROBE day={} asleep={}/{}", colony.getWorld().isDay(), asleep, citizens.size());
+        return 1;
+    }
+
+    private static ItemStack campaignBook(ServerPlayer player) {
+        return WrittenBooks.create("Walls before winter", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
+                List.of(Component.literal("I will build a wall around the colony before winter, hire two guards, and open "
+                        + "a bakery so nobody goes hungry.")));
+    }
+
+    private static ItemStack addonItem(String id) {
+        return new ItemStack(BuiltInRegistries.ITEM.getOptional(ResourceLocation.tryParse(id)).orElse(Items.AIR));
     }
 
     private static IColony colony(ServerPlayer player) {

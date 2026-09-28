@@ -62,13 +62,15 @@ public final class Couriers {
         final @Nullable String lineHint;
         final Supplier<ItemStack> item;
         final Consumer<Boolean> done;
+        /** No spoken line on hand-over: the caller has the carrier talk to the player itself. */
+        final boolean quiet;
         int ticks;
         int lastProgressTick;
         double bestDistanceSq = Double.MAX_VALUE;
 
         Job(String key, ServerPlayer player, @Nullable AbstractEntityCitizen recipient, AbstractEntityCitizen carrier,
             CitizenActivityReservation reservation, String what, @Nullable String lineHint, Supplier<ItemStack> item,
-            Consumer<Boolean> done) {
+            Consumer<Boolean> done, boolean quiet) {
             this.key = key;
             this.player = player;
             this.recipient = recipient;
@@ -78,6 +80,7 @@ public final class Couriers {
             this.lineHint = lineHint;
             this.item = item;
             this.done = done;
+            this.quiet = quiet;
         }
     }
 
@@ -117,10 +120,26 @@ public final class Couriers {
             CitizenActivityReservation reservation = CitizenConversationService
                     .reserveActivity(carrier, ownerId, Duration.ofSeconds(TIMEOUT_TICKS / 20 + 30)).orElse(null);
             if (reservation == null) continue;
-            jobs.add(new Job(key, player, null, carrier, reservation, what, lineHint, item, done));
+            jobs.add(new Job(key, player, null, carrier, reservation, what, lineHint, item, done, false));
             return true;
         }
         return false;
+    }
+
+    /**
+     * Sends exactly {@code carrier} to {@code player} with the item, e.g. a mayor with their report. On
+     * hand-over the player only gets the chat line: {@code done} gets true, and the caller has the carrier
+     * talk. Returns false, without calling {@code done}, when the carrier cannot go right now.
+     */
+    public boolean bring(String key, AbstractEntityCitizen carrier, ServerPlayer player, String what,
+                         Supplier<ItemStack> item, Consumer<Boolean> done) {
+        if (isRunning(key) || player.isSpectator() || jobs.stream().anyMatch(job -> job.carrier == carrier)) return false;
+        if (resting.getOrDefault(carrier.getUUID(), 0) > now || !usable(carrier, player)) return false;
+        CitizenActivityReservation reservation = CitizenConversationService
+                .reserveActivity(carrier, ownerId, Duration.ofSeconds(TIMEOUT_TICKS / 20 + 30)).orElse(null);
+        if (reservation == null) return false;
+        jobs.add(new Job(key, player, null, carrier, reservation, what, null, item, done, true));
+        return true;
     }
 
     /**
@@ -139,7 +158,7 @@ public final class Couriers {
         CitizenActivityReservation reservation = CitizenConversationService
                 .reserveActivity(carrier, ownerId, Duration.ofSeconds(TIMEOUT_TICKS / 20 + 30)).orElse(null);
         if (reservation == null) return false;
-        jobs.add(new Job(key, player, recipient, carrier, reservation, what, null, () -> ItemStack.EMPTY, done));
+        jobs.add(new Job(key, player, recipient, carrier, reservation, what, null, () -> ItemStack.EMPTY, done, false));
         return true;
     }
 
@@ -308,6 +327,10 @@ public final class Couriers {
     private void speak(Job job, ServerPlayer player) {
         String name = name(job.carrier);
         Component chat = Component.literal(name + " hands you " + job.what + ".").withStyle(ChatFormatting.GRAY);
+        if (job.quiet) {
+            player.sendSystemMessage(chat);
+            return;
+        }
         String directive = "You just walked up to " + player.getGameProfile().getName() + " and handed them "
                 + job.what + "." + (job.lineHint == null ? "" : " " + job.lineHint)
                 + " Say one short, friendly sentence to them about it, at most 20 words, in your own voice.";

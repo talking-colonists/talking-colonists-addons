@@ -64,6 +64,8 @@ neoForge {
             client()
             gameDirectory = file("run/scenario/")
             programArgument("--username=Dev")
+            // The size of the headless screen: sharper screenshots, GUI text readable at scale 3.
+            programArguments.addAll("--width", "1280", "--height", "720")
             if (file("run/scenario/saves/TC_Playtest").isDirectory) {
                 programArguments.addAll("--quickPlaySingleplayer", "TC_Playtest")
             }
@@ -174,7 +176,8 @@ dependencies {
     runtimeOnly("com.ldtteam:domum-ornamentum:${prop("deps.domum_version")}")
     // Compile-visible because MineColonies hut blocks extend Structurize types (the playtest places huts).
     implementation("com.ldtteam:structurize:${prop("deps.structurize_version")}")
-    runtimeOnly("com.ldtteam:blockui:${prop("deps.blockui_version")}")
+    // Compile-visible for the MineColonies-style windows (BlockUI ships with MineColonies).
+    implementation("com.ldtteam:blockui:${prop("deps.blockui_version")}")
 }
 
 tasks.named("createMinecraftArtifacts") {

@@ -37,7 +37,7 @@ final class Checklist {
                     "Every morning the teacher writes about yesterday; a citizen walks over and hands you a copy.", List.of(
                     new Button("Publish now", "/gazette publish", "Write an issue right away (uses one Gemini request)"))),
             new Section("tc_campfire", "Campfire Nights",
-                    "At dusk, idle citizens tell stories at the campfire. Stand close and chat to join in.", List.of(
+                    "At dusk, idle citizens tell stories at the campfire. Right-click the fire with an empty hand and speak, or chat, to join in.", List.of(
                     new Button("Start now", "/campfire start", "Gather idle citizens at the nearest campfire (uses Gemini Live)"),
                     new Button("Stop", "/campfire stop", "End the campfire night"))),
             new Section("tc_postal", "Postal Service",
@@ -48,14 +48,17 @@ final class Checklist {
                     "Talk to a tavern visitor and ask them to join for less; a good case lowers their price.", List.of(
                     new Button("Go to a visitor", "/playtest visitor", "Teleport next to a tavern visitor"))),
             new Section("tc_noticeboard", "Notice Board",
-                    "A signed book on a lectern becomes a notice with pinned replies; ring a bell holding a book to tell everyone.", List.of(
-                    new Button("Get a notice", "/playtest notice", "A lectern, a bell and signed notices"),
+                    "Place the Notice Board and right-click it to post a notice (citizens pin replies) or announce to everyone.", List.of(
+                    new Button("Get a notice", "/playtest notice", "A Notice Board, plus the lectern and bell shortcuts"),
                     new Button("Replies now", "/noticeboard rush", "Citizens write their replies within seconds"))),
             new Section("tc_townhall", "Town Hall",
-                    "Right-click the Town Hall block with a signed book to stand for mayor, then give a speech; citizens vote. A barrel next to it is the suggestion box.", List.of(
-                    new Button("Get a campaign", "/playtest townhall", "A campaign book and a barrel for the suggestion box"),
+                    "Place the Ballot Box in the colony and right-click it to stand for mayor, give a speech and watch the votes. Place the Suggestion Box and right-click it to read the notes. "
+                            + "A citizen mayor wears the top hat, brings a daily report and proposes building work; answer by voice or at the Mayor's desk in the Ballot Box.", List.of(
+                    new Button("Get a campaign", "/playtest townhall", "A Ballot Box, a Suggestion Box and a campaign book"),
                     new Button("Vote now", "/townhall rush", "The campaign ends now: a rival stands, then citizens vote"),
-                    new Button("Notes now", "/townhall notes", "Unhappy citizens drop notes in the suggestion box now"))));
+                    new Button("Notes now", "/townhall notes", "Unhappy citizens drop notes in the suggestion box now"),
+                    new Button("Appoint mayor", "/townhall appoint", "The nearest citizen becomes mayor right away"),
+                    new Button("Report now", "/townhall report", "The citizen mayor brings you the report and a proposal now"))));
 
     private Checklist() {
     }

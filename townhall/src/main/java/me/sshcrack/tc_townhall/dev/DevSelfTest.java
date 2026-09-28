@@ -5,15 +5,22 @@ import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.IColonyManager;
 import com.mojang.authlib.GameProfile;
 import me.sshcrack.mc_talking.api.guide.AddonGuideService;
+import me.sshcrack.tc_townhall.BallotView;
 import me.sshcrack.tc_townhall.Elections;
+import me.sshcrack.tc_townhall.Office;
+import me.sshcrack.tc_townhall.SuggestionBox;
 import me.sshcrack.tc_townhall.TownHall;
+import me.sshcrack.tc_townhall.block.SuggestionBoxBlockEntity;
+import me.sshcrack.tc_townhall.block.TownHallBlocks;
 import me.sshcrack.tc_townhall.shared.book.WrittenBooks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
+import me.sshcrack.mc_talking.api.prompt.PromptContribution;
 import net.minecraft.world.level.levelgen.Heightmap;
 /*? if neoforge {*/
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
@@ -21,6 +28,8 @@ import net.neoforged.neoforge.common.util.FakePlayerFactory;
 /*? if forge {*/
 /*import net.minecraftforge.common.util.FakePlayerFactory;
 *//*?}*/
+
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.UUID;
@@ -30,7 +39,7 @@ import java.util.UUID;
  * ({@code -Dtc_townhall.selftest=true}); excluded from the release jar. It creates a colony with three
  * citizens, has a player stand for mayor with a book, rushes the campaign so a citizen rival stands
  * (real Talking Colonists text generation), rushes again, and waits for the citizens' votes and the
- * result. Logs {@code TC_TOWNHALL_SELFTEST_SUCCESS} or {@code TC_TOWNHALL_SELFTEST_FAIL} and stops the server.
+ * result. It also places a Suggestion Box in the colony and checks the box is found and keeps notes. Logs {@code TC_TOWNHALL_SELFTEST_SUCCESS} or {@code TC_TOWNHALL_SELFTEST_FAIL} and stops the server.
  */
 public final class DevSelfTest {
     private static final GameProfile CANDIDATE = new GameProfile(UUID.fromString("74635f74-6f77-6e68-616c-6c73656c6674"), "mayor_selftest");
@@ -40,6 +49,10 @@ public final class DevSelfTest {
     private static int ticks;
     private static boolean done;
     private static boolean rivalRushed;
+    private static boolean tallySeen;
+    private static @Nullable BlockPos boxPos;
+    private static @Nullable Elections.Mayor appointed;
+    private static int officeChecks;
     private static IColony colony;
 
     private DevSelfTest() {
@@ -70,6 +83,9 @@ public final class DevSelfTest {
             ICitizenData data = colony.getCitizenManager().createAndRegisterCivilianData();
             colony.getCitizenManager().spawnOrCreateCivilian(data, level, List.of(center.offset(-1 + i, 1, 3)), true);
         }
+        boxPos = center.offset(3, 1, 0);
+        // The box is registered when its block entity loads, on a later tick; check() looks for it.
+        level.setBlockAndUpdate(boxPos, TownHallBlocks.SUGGESTION_BOX.get().defaultBlockState());
         ItemStack book = WrittenBooks.create("Walls before wishes", "mayor_selftest", WrittenBooks.ORIGINAL, List.of(
                 Component.literal("I will build a wall around the colony before winter, hire two guards, and open "
                         + "a bakery so nobody goes hungry.")));
@@ -79,15 +95,33 @@ public final class DevSelfTest {
         Elections.Election election = elections.election(colony);
         require(election != null && election.candidates.size() == 1, "one candidate is on the ballot");
         require(!election.candidates.get(0).broadcastIds.isEmpty(), "the citizens heard the candidacy");
+        BallotView view = elections.view(colony, candidate);
+        require(view.phase == BallotView.Phase.CAMPAIGN && view.youStand && view.candidates.size() == 1,
+                "the ballot box shows the campaign with the candidate");
         elections.rush();
         TownHall.LOGGER.info("TC_TOWNHALL_SELFTEST: {} stands, campaign rushed", election.candidates.get(0).name);
     }
 
     private static void check(MinecraftServer server) {
+        if (boxPos != null) {
+            ServerLevel level = server.overworld();
+            SuggestionBoxBlockEntity box = SuggestionBox.find(colony, level);
+            require(box != null && box.getBlockPos().equals(boxPos), "the colony's Suggestion Box is found");
+            box.add(new SuggestionBoxBlockEntity.Note("Selftest", "builder", colony.getDay(), "We need a bakery."));
+            require(box.notes().size() == 1 && box.remove(0) != null && box.notes().isEmpty(), "the box keeps and gives up notes");
+            boxPos = null;
+        }
         Elections elections = TownHall.elections();
         if (elections == null) return;
         Elections.Election election = elections.election(colony);
         if (election != null) {
+            if (election.voting && !election.votes.isEmpty() && !tallySeen) {
+                tallySeen = true;
+                BallotView view = elections.view(colony, FakePlayerFactory.get(server.overworld(), CANDIDATE));
+                require(view.phase == BallotView.Phase.VOTING && view.voted == election.votes.size() && !view.reasons.isEmpty(),
+                        "the ballot box shows the live tally");
+                TownHall.LOGGER.info("TC_TOWNHALL_SELFTEST: tally: {}", view.status());
+            }
             if (!election.voting && election.candidates.size() == 2 && !rivalRushed) {
                 rivalRushed = true;
                 Elections.Candidate rival = election.candidates.get(1);
@@ -99,8 +133,55 @@ public final class DevSelfTest {
         }
         require(rivalRushed, "a citizen stood against the lone candidate");
         // Every voter may abstain; then the election ends without a mayor, which is a valid outcome.
-        Elections.Mayor mayor = elections.mayor(colony);
-        TownHall.LOGGER.info("TC_TOWNHALL_SELFTEST: result: {}", mayor == null ? "nobody was elected" : mayor.result);
+        require(elections.phase(colony) == BallotView.Phase.IDLE, "the ballot box shows no election after the vote");
+        if (appointed == null) {
+            Elections.Mayor mayor = elections.mayor(colony);
+            TownHall.LOGGER.info("TC_TOWNHALL_SELFTEST: result: {}", mayor == null ? "nobody was elected" : mayor.result);
+            appoint(elections);
+            return;
+        }
+        checkOffice(server, elections);
+    }
+
+    /** Who wins the vote is up to the citizens; the office is tested with an appointed citizen mayor. */
+    private static void appoint(Elections elections) {
+        ICitizenData data = colony.getCitizenManager().getCitizens().stream()
+                .filter(citizen -> citizen.getEntity().isPresent()).findFirst().orElse(null);
+        require(data != null, "a loaded citizen to appoint");
+        appointed = elections.appoint(colony, data, "I will build homes for everyone, keep the colony fed, "
+                + "and see that nobody is left without work.");
+        elections.office().reportNow(); // counts the needs, reads the promises, chooses a proposal
+        TownHall.LOGGER.info("TC_TOWNHALL_SELFTEST: {} is appointed mayor", appointed.name);
+    }
+
+    /** The hat, the promises (real text generation), the proposal and its answer, and what prompts say. */
+    private static void checkOffice(MinecraftServer server, Elections elections) {
+        Elections.Mayor mayor = appointed;
+        ICitizenData data = colony.getCitizenManager().getCivilian(mayor.citizenId);
+        require(data != null && data.getInventory().getArmorInSlot(EquipmentSlot.HEAD).is(TownHallBlocks.MAYOR_HAT.get()),
+                "the appointed mayor wears the mayor's hat");
+        if (mayor.promises.isEmpty() && mayor.promiseAttempts < 2 && ++officeChecks < 60) return; // still reading
+        require(!mayor.promises.isEmpty(), "the mayor's promises were read from the platform");
+        TownHall.LOGGER.info("TC_TOWNHALL_SELFTEST: promises: {}", mayor.promises.stream().map(p -> p.need + " \"" + p.summary + "\"").toList());
+        String key = colony.getDimension().location() + "|" + colony.getID();
+        TownHall.LOGGER.info("TC_TOWNHALL_SELFTEST: needs: {}", elections.office().needs(key));
+        List<PromptContribution> asMayor = TownHall.politics(elections, colony.getID(), mayor.id, null);
+        require(asMayor.stream().anyMatch(c -> c.source().equals(TownHall.MOD_ID + ":mayor_role")), "the mayor knows their office");
+        List<PromptContribution> asOther = TownHall.politics(elections, colony.getID(), UUID.randomUUID(), null);
+        require(asOther.stream().anyMatch(c -> c.source().equals(TownHall.MOD_ID + ":mayor_weight")), "other citizens listen to the mayor");
+        Office.Proposal proposal = mayor.proposal;
+        if (proposal != null) {
+            ServerPlayer member = FakePlayerFactory.get(server.overworld(), CANDIDATE);
+            String outcome = elections.office().answer(colony, member, false, "Not this week");
+            require(proposal.status == Office.ProposalStatus.REFUSED && mayor.proposal == null
+                    && mayor.proposals.contains(proposal), "the refused proposal is on the mayor's record");
+            require(elections.office().record(key, mayor).contains("turned it down"), "the record shows the refusal");
+            TownHall.LOGGER.info("TC_TOWNHALL_SELFTEST: proposal \"{}\" answered: {}", proposal.what(), outcome);
+        } else {
+            TownHall.LOGGER.info("TC_TOWNHALL_SELFTEST: no proposal (no measured need with a hut to build)");
+        }
+        BallotView view = elections.view(colony, FakePlayerFactory.get(server.overworld(), CANDIDATE));
+        require(view.mayor.equals(mayor.name) && view.promises.size() == mayor.promises.size(), "the ballot box shows the mayor's desk");
         done = true;
         TownHall.LOGGER.info("TC_TOWNHALL_SELFTEST_SUCCESS");
         server.halt(false);

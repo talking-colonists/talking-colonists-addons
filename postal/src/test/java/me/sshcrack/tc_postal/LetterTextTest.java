@@ -30,6 +30,24 @@ class LetterTextTest {
     }
 
     @Test
+    void longNamesFitTheShortBookTitle() {
+        List<String> names = List.of("Samira R. Coppinger", "George G. Ansty", "Samuel T. Brook");
+        assertEquals(0, LetterText.matchRecipient("Coppinger", names), "last name");
+        assertEquals(0, LetterText.matchRecipient("Samira C.", names), "first name and last initial");
+        assertEquals(0, LetterText.matchRecipient("Samira R. Coppi", names), "cut short by the title limit");
+        assertEquals(0, LetterText.matchRecipient("Samira Copp", names), "first and last, cut short");
+        assertEquals(LetterText.NOT_FOUND, LetterText.matchRecipient("Sam", names), "too short to be a cut name");
+    }
+
+    @Test
+    void theGreetingNamesTheRecipientWhenTheTitleDoesNot() {
+        List<String> names = List.of("Samira R. Coppinger", "George G. Ansty");
+        assertEquals(1, LetterText.matchRecipient("A question", "Dear George Ansty,\nHow are you?", names));
+        assertEquals(0, LetterText.matchRecipient("Samira", "Dear George,", names), "the title wins");
+        assertEquals(LetterText.NOT_FOUND, LetterText.matchRecipient("Hi", "Hello there", names));
+    }
+
+    @Test
     void directiveQuotesTheLetterAndCapsItsLength() {
         String directive = LetterText.directive("Steve", "Hello", "x".repeat(5_000), false);
         assertTrue(directive.startsWith("Steve sent you, by the colony's courier, a letter titled \"Hello\"."));

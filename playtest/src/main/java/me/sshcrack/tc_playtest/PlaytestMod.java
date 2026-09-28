@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerPlayer;
 /*import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.loading.FMLEnvironment;
@@ -16,6 +17,7 @@ import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 /*?}*/
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +43,14 @@ public class PlaytestMod {
             if (event.getEntity() instanceof ServerPlayer player) onJoin(player);
         });
         bus.addListener((RegisterCommandsEvent event) -> PlaytestCommand.register(event.getDispatcher()));
+        /*? if forge {*/
+        /*bus.addListener((TickEvent.ServerTickEvent event) -> {
+            if (event.phase == TickEvent.Phase.END) PlaytestBuild.tick();
+        });
+        *//*?}*/
+        /*? if neoforge {*/
+        bus.addListener((ServerTickEvent.Post event) -> PlaytestBuild.tick());
+        /*?}*/
         if (FMLEnvironment.dist == Dist.CLIENT) {
             PlaytestClient.init();
             PlaytestScenario.init();

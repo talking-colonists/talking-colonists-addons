@@ -76,11 +76,18 @@ MineColonies' recruit window, and the visitor remembers the deal after they join
 
 ## Notice Board
 
-Put a signed book on a lectern inside your colony and it becomes a notice: the citizens near the board
-read it first (a Talking Colonists broadcast from "the notice board") and spread it to the others, so
-they bring it up when you talk to them. A few minutes later up to three citizens near the board write
-short replies, worries or petitions, which are pinned into the book as extra pages; read them on the
-lectern. Taking the book down cancels the replies. As word spreads you hear how far it got: once half
+Full guide: [docs/addons/noticeboard.md](docs/addons/noticeboard.md).
+
+Craft a Notice Board (planks around paper, on two sticks), place it in your colony and right-click it.
+Write a title and your notice and press **Post**: the citizens near the board read it first (a Talking
+Colonists broadcast from "the notice board") and spread it to the others, so they bring it up when you
+talk to them. Over the next few minutes up to three citizens near the board pin short replies, worries
+or petitions under it; you see the sheets appear on the board, and read them in its window together
+with how far the word has spread. **Take down** removes the notice and stops the replies; posting a new
+one replaces it. **Announce** tells every citizen at once without pinning anything.
+
+A signed book on a lectern inside your colony works as a notice too; its replies are pinned into the
+book as extra pages. Taking the book down cancels the replies. As word spreads you hear how far it got: once half
 the colony knows, and once everyone does (with Talking Colonists versions that report it). Watch
 closely and you'll see citizens stop and pass the news on to each other.
 
@@ -91,10 +98,16 @@ a town crier (the bell rings as usual).
 
 ## Town Hall
 
-Right-click your colony's Town Hall block while holding a signed book: you stand for mayor, with the
-book's title as your slogan and its text as your platform. With Simple Voice Chat you then have 30
-seconds to give a speech. Citizens at the town hall hear it and pass it on, so every citizen votes on
-what actually reached them, and on how they feel about you after your conversations.
+Full guide: [docs/addons/townhall.md](docs/addons/townhall.md).
+
+Craft a Ballot Box (spruce planks around paper and an iron ingot), place it in your colony and
+right-click it. Its window shows the candidates with their slogans and plans, and lets you stand for
+mayor: type a slogan and what you will do. (Right-clicking the Town Hall block with a signed book works
+too: the title is the slogan, the text the platform.) With Simple Voice Chat you then have 30 seconds
+to give a speech, and you can speak again during the campaign. Citizens nearby hear it and pass it on,
+so every citizen votes on what actually reached them, and on how they feel about you after your
+conversations. While citizens vote, the window fills with a live tally and each voter's reason. The box
+shows the phase: a poster during the campaign, a flag while voting is open.
 
 The campaign lasts one Minecraft day. If you're the only candidate, the unhappiest citizen stands
 against you, with a platform built from the colony's real problems, so you can lose. Then every grown
@@ -102,8 +115,10 @@ citizen votes in character. The whole colony hears the result, a citizen brings 
 with a few voters' reasons, and the mayor is part of what citizens know from then on. A new election
 can be called three days later.
 
-Place a barrel within 4 blocks of the Town Hall block and it becomes the suggestion box: every morning
-up to three unhappy citizens drop a one-page note with a real concern or wish (at most 6 wait in it).
+Craft a Suggestion Box (paper over a chest over a log) and place it anywhere in the colony: every morning
+up to three unhappy citizens drop a short note with a real concern or wish (at most 6 wait in it). A
+paper sticks out of the slot while notes wait; right-click it to read them, take one along as a
+one-page book, or throw it away.
 
 - Operators: `/townhall rush` ends running campaigns now; `/townhall notes` has citizens write notes now.
 

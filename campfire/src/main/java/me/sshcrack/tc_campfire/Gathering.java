@@ -14,6 +14,8 @@ import me.sshcrack.mc_talking.api.conversation.CitizenConversationService;
 import me.sshcrack.mc_talking.api.conversation.ControlledConversationOptions;
 import me.sshcrack.mc_talking.api.conversation.ControlledConversationSession;
 import me.sshcrack.mc_talking.api.conversation.ConversationTranscriptEntry;
+import me.sshcrack.mc_talking.api.speech.PlayerSpeechCapture;
+import me.sshcrack.mc_talking.api.speech.SpeechCaptureResult;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -27,6 +29,7 @@ import org.jetbrains.annotations.Nullable;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 /**
@@ -44,6 +47,7 @@ public final class Gathering {
     private static final double SEATED_DISTANCE_SQ = 1.5 * 1.5;
     private static final double DRIFT_DISTANCE_SQ = 3.5 * 3.5;
     private static final double WALK_SPEED = 0.6;
+    private static final Duration LISTEN_DURATION = Duration.ofSeconds(20);
     /** Guests stay seated for the whole night; {@link #finish} stands them up earlier. */
     private static final int SIT_TICKS = GATHER_TIMEOUT_TICKS + TELLING_TIMEOUT_TICKS;
 
@@ -61,6 +65,10 @@ public final class Gathering {
     private int pausedTicks;
     private @Nullable ControlledConversationSession session;
     private @Nullable AutonomousDiscussionHandle discussion;
+    /** The player the tellers are listening to, while their speech is captured. */
+    private @Nullable UUID listening;
+    /** A teller is answering a player. */
+    private boolean answering;
 
     Gathering(MinecraftServer server, IColony colony, ServerLevel level, BlockPos campfire,
               List<AbstractEntityCitizen> tellers, List<CitizenActivityReservation> reservations, Consumer<String> report) {
@@ -204,6 +212,7 @@ public final class Gathering {
             finish("The stories could not start: " + e.getMessage());
             return;
         }
+        tellListeners("Right-click the fire with an empty hand to speak up, or type in chat.");
         discussion.completion().whenComplete((reason, error) ->
                 server.execute(() -> finish(error != null ? "The stories stopped: " + error : describe(reason))));
     }
@@ -217,12 +226,108 @@ public final class Gathering {
         };
     }
 
-    /** A player near the fire said something: the tellers hear it and may answer. */
-    boolean playerSays(ServerPlayer player, String text) {
-        ControlledConversationSession current = session;
-        if (phase != Phase.TELLING || current == null) return false;
-        current.addPlayerStatement(player, text);
+    /**
+     * A player near the fire right-clicked it to speak up: the tellers fall silent and listen, the one
+     * the player looks at answers, then the stories go on.
+     */
+    boolean speakUp(ServerPlayer player) {
+        if (phase != Phase.TELLING || session == null || discussion == null) return false;
+        if (listening != null || answering) {
+            player.displayClientMessage(Component.literal("Someone is already speaking at the fire.").withStyle(ChatFormatting.GRAY), true);
+            return true;
+        }
+        if (!TalkingColonistsApi.supports(ApiFeature.PLAYER_SPEECH_CAPTURE)) {
+            player.displayClientMessage(Component.literal("Type in chat to speak to the storytellers.").withStyle(ChatFormatting.GRAY), true);
+            return true;
+        }
+        hush();
+        listening = player.getUUID();
+        player.displayClientMessage(Component.literal("The storytellers fall silent and look at you. Speak now.")
+                .withStyle(ChatFormatting.GOLD), true);
+        PlayerSpeechCapture.capture(player, LISTEN_DURATION).whenComplete((result, error) -> server.execute(() -> {
+            listening = null;
+            if (phase != Phase.TELLING) return;
+            if (error == null && result.status() == SpeechCaptureResult.Status.TRANSCRIBED && result.transcript() != null) {
+                answer(player, result.transcript());
+                return;
+            }
+            if (error == null && result.status() == SpeechCaptureResult.Status.NO_VOICE_CHAT) {
+                player.displayClientMessage(Component.literal("No voice chat: type in chat to speak to the storytellers.")
+                        .withStyle(ChatFormatting.GRAY), true);
+            }
+            carryOn();
+        }));
         return true;
+    }
+
+    /** A player near the fire said something in chat: the tellers stop, one answers, then the stories go on. */
+    boolean playerSays(ServerPlayer player, String text) {
+        if (phase != Phase.TELLING || session == null || discussion == null || text.isBlank()) return false;
+        if (listening != null || answering) {
+            session.addPlayerStatement(player, text); // heard along with the answer already coming
+            return true;
+        }
+        hush();
+        answer(player, text);
+        return true;
+    }
+
+    /** The tellers stop for the player: the discussion pauses and whoever is speaking breaks off. */
+    private void hush() {
+        if (discussion != null) discussion.pause();
+        if (session != null) session.interruptTurn();
+    }
+
+    private void answer(ServerPlayer player, String text) {
+        ControlledConversationSession current = session;
+        if (current == null) return;
+        current.addPlayerStatement(player, text);
+        AbstractEntityCitizen teller = addressed(player);
+        if (teller == null) {
+            carryOn();
+            return;
+        }
+        answering = true;
+        CampfireNights.LOGGER.info("{} speaks up at the campfire; {} answers", player.getGameProfile().getName(),
+                names(List.of(teller)).get(0));
+        current.requestTurn(teller, CampfireStory.answer(player.getGameProfile().getName(), text), null)
+                .whenComplete((result, error) -> server.execute(() -> {
+                    answering = false;
+                    if (error != null || !result.completed()) {
+                        CampfireNights.LOGGER.info("The answer at the campfire did not come: {}",
+                                error != null ? error.toString() : result.status() + " " + result.detail());
+                    }
+                    carryOn();
+                }));
+    }
+
+    /** The teller the player looks at most directly, else the one closest to them. */
+    private @Nullable AbstractEntityCitizen addressed(ServerPlayer player) {
+        Vec3 eye = player.getEyePosition();
+        Vec3 look = player.getLookAngle();
+        AbstractEntityCitizen best = null;
+        double bestScore = Double.NEGATIVE_INFINITY;
+        for (AbstractEntityCitizen teller : tellers) {
+            if (!teller.isAlive() || teller.isRemoved()) continue;
+            Vec3 toTeller = teller.getEyePosition().subtract(eye);
+            double distance = toTeller.length();
+            if (distance < 1.0E-3) return teller;
+            double facing = look.dot(toTeller.scale(1 / distance));
+            // Looking at someone (within ~25°) wins; otherwise the nearest teller answers.
+            double score = facing > 0.9 ? 100 + facing : -distance;
+            if (score > bestScore) {
+                bestScore = score;
+                best = teller;
+            }
+        }
+        return best;
+    }
+
+    /** The stories go on after the player was answered (or said nothing after all). */
+    private void carryOn() {
+        if (phase == Phase.TELLING && discussion != null && discussion.state() == AutonomousDiscussionHandle.State.PAUSED) {
+            discussion.resume();
+        }
     }
 
     /** Ends the night early (command, server stop). */
