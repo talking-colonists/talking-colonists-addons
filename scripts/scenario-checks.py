@@ -233,6 +233,8 @@ def window_checks(window):
 COMMON = [
     logged_any("scenario finished", r"TC_PLAYTEST_SCENARIO_DONE"),
     logged_none("every awaited event happened", r"TC_AWAIT timeout"),
+    # Playtest 2026-09-28: introductions ended as this chat line while another citizen was talking.
+    logged_none("introductions are spoken, not only a chat line", r"\[CHAT\] .+ tells you about "),
 ]
 
 HOSTILE = r"incompeten|useless|pathetic|how dare|disgrace|worthless|lazy"
