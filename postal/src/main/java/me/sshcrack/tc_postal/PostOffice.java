@@ -1,6 +1,7 @@
 package me.sshcrack.tc_postal;
 
 import com.minecolonies.api.colony.ICitizenData;
+import com.minecolonies.api.colony.ICivilianData;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.IColonyManager;
 import com.minecolonies.api.colony.jobs.ModJobs;
@@ -91,6 +92,11 @@ public final class PostOffice {
             return false;
         }
         if (index == LetterText.NOT_FOUND) {
+            String visitor = visitorCalled(colony, text.title(), text.pages().isEmpty() ? null : text.pages().get(0));
+            if (visitor != null) {
+                tell(player, visitor + " is only visiting the tavern: letters go to the citizens of " + colony.getName() + ".");
+                return false;
+            }
             tell(player, "Nobody in " + colony.getName() + " is called \"" + text.title()
                     + "\". Sign the letter with the recipient's name as its title (a first or last name is enough), "
                     + "or start it with \"Dear <name>,\".");
@@ -316,6 +322,14 @@ public final class PostOffice {
 
     static void tell(ServerPlayer player, String text) {
         player.sendSystemMessage(prefix().append(Component.literal(text).withStyle(ChatFormatting.GRAY)));
+    }
+
+    /** The tavern visitor the letter is addressed to, or null. */
+    private static @Nullable String visitorCalled(IColony colony, String title, @Nullable String firstPage) {
+        List<String> visitors = colony.getVisitorManager().getCivilianDataMap().values().stream()
+                .map(ICivilianData::getName).toList();
+        int index = LetterText.matchRecipient(title, firstPage, visitors);
+        return index >= 0 ? visitors.get(index) : null;
     }
 
     private static MutableComponent prefix() {
