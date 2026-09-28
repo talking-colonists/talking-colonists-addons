@@ -2,6 +2,10 @@ package me.sshcrack.tc_townhall;
 
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.IColonyManager;
+import me.sshcrack.mc_talking.api.conversation.ConversationUtteranceEvent;
+import me.sshcrack.mc_talking.api.conversation.ConversationKind;
+import me.sshcrack.mc_talking.api.conversation.CitizenConversationService;
+import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import me.sshcrack.mc_talking.api.ApiFeature;
 import me.sshcrack.mc_talking.api.TalkingColonistsApi;
 import me.sshcrack.tc_townhall.shared.guide.Guides;
@@ -116,6 +120,9 @@ public class TownHall {
         }
         registerGuide();
         AiToolRegistry.register(MOD_ID, MayorsOffice.TOOL, new AnswerProposalTool());
+        if (TalkingColonistsApi.supports(ApiFeature.UTTERANCE_EVENTS)) {
+            CitizenConversationService.registerUtteranceListener(MOD_ID + ":proposal_presented", 0, TownHall::heardMayor);
+        }
         CitizenPromptService.registerContributor(MOD_ID + ":politics", 100, context -> {
             Elections running = elections;
             if (running == null || context.view().visitor() != null) return List.of();
@@ -155,6 +162,23 @@ public class TownHall {
         });
         bus.addListener(TownHall::onRightClickBlock);
         bus.addListener((RegisterCommandsEvent event) -> TownHallCommands.register(event.getDispatcher()));
+    }
+
+    /** The citizen mayor said something to a player: from then on, the player's answer to the proposal counts. */
+    private static void heardMayor(ConversationUtteranceEvent event) {
+        AbstractEntityCitizen citizen = event.citizen();
+        if (event.speaker() != ConversationUtteranceEvent.Speaker.CITIZEN || event.kind() != ConversationKind.PLAYER
+                || citizen == null || citizen.getCitizenData() == null || citizen.level().getServer() == null) {
+            return;
+        }
+        citizen.level().getServer().execute(() -> {
+            Elections running = elections;
+            IColony colony = citizen.getCitizenData().getColony();
+            Elections.Mayor mayor = running == null ? null : running.mayor(colony);
+            if (mayor != null && mayor.citizen && mayor.id.equals(citizen.getUUID()) && mayor.proposal != null) {
+                mayor.proposal.presented = true;
+            }
+        });
     }
 
     private static void registerGuide() {

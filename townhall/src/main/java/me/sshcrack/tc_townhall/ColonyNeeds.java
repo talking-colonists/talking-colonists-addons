@@ -3,6 +3,7 @@ package me.sshcrack.tc_townhall;
 import com.minecolonies.api.colony.ICitizenData;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.buildings.IBuilding;
+import com.minecolonies.core.colony.buildings.AbstractBuildingStructureBuilder;
 import com.minecolonies.api.colony.workorders.IServerWorkOrder;
 import com.minecolonies.api.entity.citizen.happiness.IHappinessModifier;
 import com.minecolonies.api.util.constant.Constants;
@@ -68,6 +69,18 @@ final class ColonyNeeds {
                     building.getMaxBuildingLevel(), ordered.contains(building.getPosition()), builders.get(building.getPosition())));
         }
         return huts;
+    }
+
+    /** The level of the colony's best builder's hut with a builder in it; 0 without one. */
+    static int builderLevel(IColony colony) {
+        int level = 0;
+        for (IBuilding building : colony.getServerBuildingManager().getBuildings().values()) {
+            if (building instanceof AbstractBuildingStructureBuilder && type(building).equals(Office.BUILDER)
+                    && !building.getAllAssignedCitizen().isEmpty()) {
+                level = Math.max(level, building.getBuildingLevel());
+            }
+        }
+        return level;
     }
 
     /** The builder who claimed the work order, when their hut has one; null while it waits for a builder. */

@@ -111,7 +111,8 @@ public final class MayorsOffice {
                 if (entity == null) continue;
                 wearHat(data);
                 if (mayor.proposal == null) {
-                    mayor.proposal = Office.choose(needs, mayor.needSince, ColonyNeeds.huts(colony), mayor.proposals, day);
+                    mayor.proposal = Office.choose(needs, mayor.needSince, ColonyNeeds.huts(colony), mayor.proposals, day,
+                            ColonyNeeds.builderLevel(colony));
                     changed |= mayor.proposal != null;
                 }
                 changed |= report(colony, key, mayor, entity, needs, day, now);

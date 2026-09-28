@@ -1,6 +1,8 @@
 package me.sshcrack.tc_townhall;
 
 import com.google.gson.JsonObject;
+import me.sshcrack.mc_talking.api.ApiFeature;
+import me.sshcrack.mc_talking.api.TalkingColonistsApi;
 import me.sshcrack.mc_talking.api.tool.AiCommandTool;
 import me.sshcrack.mc_talking.api.tool.AiToolContext;
 import me.sshcrack.mc_talking.api.tool.AiToolParameter;
@@ -52,6 +54,14 @@ final class AnswerProposalTool implements AiCommandTool {
             Elections elections = TownHall.elections();
             if (elections == null || !canExecute(context)) {
                 result.addProperty("error", "there is no proposal of yours waiting for this player's answer");
+                return result;
+            }
+            Elections.Mayor mayor = elections.mayor(context.colony());
+            if (mayor != null && mayor.proposal != null && !mayor.proposal.presented
+                    && TalkingColonistsApi.supports(ApiFeature.UTTERANCE_EVENTS)) {
+                // Seen in a playtest: the mayor "accepted" in its first turn, before saying a word.
+                result.addProperty("error", "The player has not heard your proposal yet. Tell them what you propose "
+                        + "and why, then wait for their answer; never answer for them.");
                 return result;
             }
             boolean accept = parameters != null && parameters.has("accept") && parameters.get("accept").getAsBoolean();
