@@ -7,6 +7,9 @@ its recipient and brings you the answer.
 
 1. Write your letter in a **book and quill**.
 2. Sign it with the recipient's name as the title: "Anna", "Dear Anna Smith" and "To: Anna" all work.
+   Book titles are short, so a last name ("Coppinger"), a first name with the last initial ("Samira C.")
+   or a name cut short ("Samira R. Coppi") work too. If the title names nobody, the letter's first
+   line counts: start it with "Dear Samira Coppinger,".
 3. Right-click the colony's **courier** with it, or the recipient in person. Without a courier, any
    citizen passes it on.
 4. The citizen who took it walks it over and hands it over (you get a line in chat). If the recipient
