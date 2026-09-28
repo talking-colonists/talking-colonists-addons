@@ -1,8 +1,8 @@
 package me.sshcrack.tc_noticeboard.block;
 
+import com.minecolonies.api.creativetab.ModCreativeTabs;
 import me.sshcrack.tc_noticeboard.NoticeBoard;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -52,7 +52,8 @@ public final class NoticeBoardBlocks {
         ITEMS.register(modBus);
         BLOCK_ENTITIES.register(modBus);
         modBus.addListener((BuildCreativeModeTabContentsEvent event) -> {
-            if (event.getTabKey() != CreativeModeTabs.FUNCTIONAL_BLOCKS) return;
+            // With MineColonies' own items, where colony players look for them.
+            if (event.getTabKey() != ModCreativeTabs.GENERAL.getKey()) return;
             event.accept(NOTICE_BOARD_ITEM.get());
         });
     }
