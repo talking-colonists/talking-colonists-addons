@@ -17,7 +17,8 @@ import java.util.Map;
 /**
  * A scripted playtest for the headless scenario client ({@code scripts/scenario.sh}): once the
  * player is in the world it runs timed steps as that real player, so every ambient feature treats
- * it as a listener, then quits. Each step is logged as a speech-timeline mark, which the report
+ * it as a listener, then quits. A command starting with {@code chat:} is sent as a chat message
+ * instead. Each step is logged as a speech-timeline mark, which the report
  * prints between the voices. Enabled with {@code -Dtc_playtest.scenario=<name>}.
  */
 final class PlaytestScenario {
@@ -30,8 +31,10 @@ final class PlaytestScenario {
             "campfire", List.of(
                     new Step(20, "day: standing in the colony", List.of("playtest home", "time set 6000")),
                     new Step(110, "dusk: campfire night starts", List.of("time set 12500", "campfire start")),
-                    new Step(290, "campfire stopped", List.of("campfire stop")),
-                    new Step(305, "scenario done", List.of())),
+                    new Step(200, "player speaks up at the fire",
+                            List.of("chat:Excuse me, can one of you tell me what lies beyond the hills to the east?")),
+                    new Step(320, "campfire stopped", List.of("campfire stop")),
+                    new Step(335, "scenario done", List.of())),
             // Only the ambient life of the colony by day: greetings, mumbling, rumors, urgent contact.
             "ambient", List.of(
                     new Step(20, "day: standing in the colony", List.of("playtest home", "time set 6000")),
@@ -70,7 +73,8 @@ final class PlaytestScenario {
         next++;
         mark(step.mark());
         for (String command : step.commands()) {
-            mc.player.connection.sendCommand(command);
+            if (command.startsWith("chat:")) mc.player.connection.sendChat(command.substring("chat:".length()));
+            else mc.player.connection.sendCommand(command);
         }
         if (next == steps.size()) {
             PlaytestMod.LOGGER.info("TC_PLAYTEST_SCENARIO_DONE");

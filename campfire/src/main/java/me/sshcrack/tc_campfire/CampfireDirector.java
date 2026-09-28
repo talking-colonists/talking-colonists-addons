@@ -91,13 +91,27 @@ public final class CampfireDirector {
         }
         if (tellers.size() < minTellers) {
             reservations.forEach(CitizenActivityReservation::close);
-            report.accept("Only " + tellers.size() + " idle citizens are near the campfire; at least " + minTellers + " are needed.");
+            long asleep = asleepNear(colony, fire);
+            report.accept(asleep > 0 && tellers.size() + asleep >= minTellers
+                    ? "The citizens near the fire are asleep (" + asleep + "). Campfire nights gather at dusk, before bedtime:"
+                            + " come back tomorrow evening."
+                    : "Only " + tellers.size() + " idle citizens are near the campfire; at least " + minTellers + " are needed.");
             return null;
         }
         Gathering gathering = new Gathering(server, colony, level, fire, tellers, reservations, report);
         active.add(gathering);
         CampfireNights.LOGGER.info("Campfire night in {} at {} with {}", colony.getName(), fire, Gathering.names(tellers));
         return gathering;
+    }
+
+    /** Loaded citizens within reach of the fire who are asleep. */
+    private static long asleepNear(IColony colony, BlockPos fire) {
+        Vec3 center = Vec3.atCenterOf(fire);
+        return colony.getCitizenManager().getCitizens().stream()
+                .filter(ICitizenData::isAsleep)
+                .map(data -> data.getEntity().orElse(null))
+                .filter(citizen -> citizen != null && citizen.position().distanceToSqr(center) <= GATHER_RANGE * GATHER_RANGE)
+                .count();
     }
 
     /** Idle, loaded citizens (not visitors) within reach of the fire, nearest first. */
@@ -154,6 +168,14 @@ public final class CampfireDirector {
             if (gathering.colony.getID() == colony.getID() && gathering.level == colony.getWorld()) return gathering;
         }
         return null;
+    }
+
+    /** A player right-clicked {@code pos} with an empty hand: at a running campfire night, they speak up. */
+    boolean onUse(ServerPlayer player, BlockPos pos) {
+        for (Gathering gathering : active) {
+            if (gathering.level == player.level() && gathering.campfire.equals(pos)) return gathering.speakUp(player);
+        }
+        return false;
     }
 
     /** Hands chat from a player near a running campfire night to the tellers. */
