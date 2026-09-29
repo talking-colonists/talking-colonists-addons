@@ -76,11 +76,18 @@ MineColonies' recruit window, and the visitor remembers the deal after they join
 
 ## Notice Board
 
-Put a signed book on a lectern inside your colony and it becomes a notice: the citizens near the board
-read it first (a Talking Colonists broadcast from "the notice board") and spread it to the others, so
-they bring it up when you talk to them. A few minutes later up to three citizens near the board write
-short replies, worries or petitions, which are pinned into the book as extra pages; read them on the
-lectern. Taking the book down cancels the replies. As word spreads you hear how far it got: once half
+Full guide: [docs/addons/noticeboard.md](docs/addons/noticeboard.md).
+
+Craft a Notice Board (planks around paper, on two sticks), place it in your colony and right-click it.
+Write a title and your notice and press **Post**: the citizens near the board read it first (a Talking
+Colonists broadcast from "the notice board") and spread it to the others, so they bring it up when you
+talk to them. Over the next few minutes up to three citizens near the board pin short replies, worries
+or petitions under it; you see the sheets appear on the board, and read them in its window together
+with how far the word has spread. **Take down** removes the notice and stops the replies; posting a new
+one replaces it. **Announce** tells every citizen at once without pinning anything.
+
+A signed book on a lectern inside your colony works as a notice too; its replies are pinned into the
+book as extra pages. Taking the book down cancels the replies. As word spreads you hear how far it got: once half
 the colony knows, and once everyone does (with Talking Colonists versions that report it). Watch
 closely and you'll see citizens stop and pass the news on to each other.
 

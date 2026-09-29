@@ -48,8 +48,8 @@ final class Checklist {
                     "Talk to a tavern visitor and ask them to join for less; a good case lowers their price.", List.of(
                     new Button("Go to a visitor", "/playtest visitor", "Teleport next to a tavern visitor"))),
             new Section("tc_noticeboard", "Notice Board",
-                    "A signed book on a lectern becomes a notice with pinned replies; ring a bell holding a book to tell everyone.", List.of(
-                    new Button("Get a notice", "/playtest notice", "A lectern, a bell and signed notices"),
+                    "Place the Notice Board and right-click it to post a notice (citizens pin replies) or announce to everyone.", List.of(
+                    new Button("Get a notice", "/playtest notice", "A Notice Board, plus the lectern and bell shortcuts"),
                     new Button("Replies now", "/noticeboard rush", "Citizens write their replies within seconds"))),
             new Section("tc_townhall", "Town Hall",
                     "Place the Ballot Box in the colony and right-click it to stand for mayor, give a speech and watch the votes. Place the Suggestion Box and right-click it to read the notes.", List.of(

@@ -102,7 +102,7 @@ final class PlaytestCommand {
         return 0;
     }
 
-    /** A lectern with a notice to put on it, and a bell with an announcement to ring. */
+    /** A Notice Board block; also the lectern and bell shortcuts, with books for them. */
     private static int notice(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         ItemStack notice = WrittenBooks.create("Harvest fair", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
@@ -110,11 +110,13 @@ final class PlaytestCommand {
                         + "the finest wins a golden hoe. Who wants to help build the stalls?")));
         ItemStack crier = WrittenBooks.create("Fair today", player.getGameProfile().getName(), WrittenBooks.ORIGINAL,
                 List.of(Component.literal("The harvest fair starts at noon at the town hall. Everyone is welcome!")));
-        for (ItemStack stack : List.of(new ItemStack(Items.LECTERN), notice,
+        for (ItemStack stack : List.of(addonItem("tc_noticeboard:notice_board"), new ItemStack(Items.LECTERN), notice,
                 new ItemStack(Items.BELL), crier)) {
+            if (stack.isEmpty()) continue;
             if (!player.getInventory().add(stack)) player.drop(stack, false);
         }
-        context.getSource().sendSuccess(() -> Component.literal("[Playtest] Place the lectern in the colony and put \"Harvest fair\" on it. Place the bell and ring it holding \"Fair today\"."), false);
+        context.getSource().sendSuccess(() -> Component.literal("[Playtest] Place the Notice Board in the colony and right-click it to post a notice or announce something. "
+                + "Shortcuts: put \"Harvest fair\" on the lectern, or ring the bell holding \"Fair today\"."), false);
         return 1;
     }
 
